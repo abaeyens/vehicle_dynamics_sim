@@ -12,7 +12,9 @@
 #include <rclcpp/rclcpp.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
@@ -53,8 +55,11 @@ SimNode::SimNode()
     this->get_logger(), fmt::format("Instantiated vehicle of name {}", vehicle_->name()).c_str());
 
   // Subscribers
-  sub_twist_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
-    "twist_reference", 10, [this](const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
+  sub_twist_ = this->create_subscription<geometry_msgs::msg::Twist>(
+    "twist_reference", 10,
+    [this](const geometry_msgs::msg::Twist::SharedPtr msg) { this->store_twist_reference(msg); });
+  sub_twist_stamped_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+    "twist_stamped_reference", 10, [this](const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
       this->store_twist_reference(msg);
     });
 
@@ -63,8 +68,10 @@ SimNode::SimNode()
     pub_clock_ = this->create_publisher<builtin_interfaces::msg::Time>("clock", 50);
   }
   pub_tf_ = this->create_publisher<tf2_msgs::msg::TFMessage>("/tf", 10);
-  pub_tf_static_ = this->create_publisher<tf2_msgs::msg::TFMessage>("/tf_static", 10);
+  pub_tf_static_ = this->create_publisher<tf2_msgs::msg::TFMessage>(
+    "/tf_static", rclcpp::QoS(10).transient_local());
   pub_twist_ = this->create_publisher<geometry_msgs::msg::TwistStamped>("twist_actual", 10);
+  pub_odom_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
 
   // Timer, which will tick the simulator at step_rate_
   timer_ = this->create_timer(
@@ -82,6 +89,17 @@ SimNode::SimNode()
       msg.transforms.push_back(tf);
     }
     pub_tf_static_->publish(msg);
+  }
+}
+
+void SimNode::store_twist_reference(const geometry_msgs::msg::Twist::SharedPtr msg)
+{
+  twist_reference_.header.stamp = time_;
+  twist_reference_.twist = *msg;
+  // Transform to base frame
+  const double & offset = vehicle_->get_base_link_offset();
+  if (offset != 0) {
+    twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
   }
 }
 
@@ -125,17 +143,17 @@ void SimNode::tick_simulation()
     // Actual twist
     pub_twist_->publish(vehicle_->get_actual_twist());
     // Pose (over tf)
+    const auto [position, heading] = vehicle_->get_pose();
+    const Eigen::Quaterniond orientation =
+      Eigen::Quaterniond(Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
     {
       geometry_msgs::msg::TransformStamped tf;
       tf.header.stamp = time_;
       tf.header.frame_id = "map";
       tf.child_frame_id = "base_link";
-      const auto [position, heading] = vehicle_->get_pose();
       tf.transform.translation.x = position.x();
       tf.transform.translation.y = position.y();
       tf.transform.translation.z = 0;
-      const Eigen::Quaterniond orientation =
-        Eigen::Quaterniond(Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
       tf.transform.rotation.x = orientation.x();
       tf.transform.rotation.y = orientation.y();
       tf.transform.rotation.z = orientation.z();
@@ -143,6 +161,22 @@ void SimNode::tick_simulation()
       tf2_msgs::msg::TFMessage msg;
       msg.transforms.push_back(tf);
       pub_tf_->publish(msg);
+    }
+    // Odometry (= twist + pose, Nav2 wants/needs this)
+    {
+      nav_msgs::msg::Odometry msg;
+      msg.header.stamp = time_;
+      msg.header.frame_id = "map";
+      msg.child_frame_id = "base_link";
+      msg.pose.pose.position.x = position.x();
+      msg.pose.pose.position.y = position.y();
+      msg.pose.pose.position.z = 0;
+      msg.pose.pose.orientation.x = orientation.x();
+      msg.pose.pose.orientation.y = orientation.y();
+      msg.pose.pose.orientation.z = orientation.z();
+      msg.pose.pose.orientation.w = orientation.w();
+      msg.twist.twist = vehicle_->get_actual_twist().twist;
+      pub_odom_->publish(msg);
     }
   }
 }

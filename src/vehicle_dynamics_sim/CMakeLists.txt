@@ -9,6 +9,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(builtin_interfaces)
 find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(Boost REQUIRED)
@@ -19,6 +20,7 @@ set(dependencies
   rclcpp
   builtin_interfaces
   geometry_msgs
+  nav_msgs
   std_msgs
   tf2_msgs
   Boost
@@ -84,9 +86,8 @@ install(
 
 install(
   DIRECTORY
-    config
-    models
     launch
+    params
   DESTINATION share/${PROJECT_NAME}
 )
 

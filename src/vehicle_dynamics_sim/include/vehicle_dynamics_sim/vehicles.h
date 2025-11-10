@@ -50,7 +50,7 @@ class DriveActuator : public ModelBase
 {
 public:
   DriveActuator(rclcpp::Node & node, const std::string & ns);
-  inline double get_max_velocity() { return max_velocity_; }
+  inline double get_max_velocity() const { return max_velocity_; }
   double get_new_velocity(const rclcpp::Time & time, const double & reference_velocity);
 
 private:
@@ -68,7 +68,7 @@ class SteeringActuator : public ModelBase
 {
 public:
   SteeringActuator(rclcpp::Node & node, const std::string & ns);
-
+  inline double get_max_position() const { return max_position_; }
   double get_new_position(const rclcpp::Time & time, const double & reference_position);
 
 private:

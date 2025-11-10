@@ -51,6 +51,7 @@ VehicleName toVehicleName(const std::string_view & name)
 DeadTimeDelay::DeadTimeDelay(rclcpp::Node & node, const std::string & ns)
 : ModelBase(), dead_time_(declare_and_get_parameter(node, ns + ".dead_time", 0.2))
 {
+  CHECK_GE(dead_time_, 0.0, "'" + ns + ".dead_time' must be strictly positive.");
 }
 
 void DeadTimeDelay::enter(const rclcpp::Time & time, const double value)
@@ -76,6 +77,9 @@ DriveActuator::DriveActuator(rclcpp::Node & node, const std::string & ns)
   max_acceleration_(declare_and_get_parameter(node, ns + ".max_acceleration", 2.0)),
   deadTimeDelay_(node, ns)
 {
+  CHECK_GE(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be positive.");
+  CHECK_GE(time_constant_, 0.0, "'" + ns + ".time_constant' must be positive.");
+  CHECK_GT(max_acceleration_, 0.0, "'" + ns + ".max_acceleration' must be strictly positive.");
 }
 
 double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double & reference_velocity)
@@ -107,6 +111,9 @@ SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
   max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
   deadTimeDelay_(node, ns)
 {
+  CHECK_GE(max_position_, 0.0, "'" + ns + ".max_position' must be positive.");
+  CHECK_GE(time_constant_, 0.0, "'" + ns + ".time_constant' must be positive.");
+  CHECK_GT(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be strictly positive.");
 }
 
 double SteeringActuator::get_new_position(
@@ -169,6 +176,16 @@ BicycleVehicle::BicycleVehicle(rclcpp::Node & node, const std::string & ns)
   drive_actuator_(DriveActuator(node, ns + ".drive_actuator")),
   steering_actuator_(SteeringActuator(node, ns + ".steering_actuator"))
 {
+  CHECK_GT(wheel_base_, 0.0, "'" + ns + ".wheel_base' must be strictly positive.");
+  if (reverse_)
+    throw std::logic_error("BicycleVehicle::BicycleVehicle: 'reverse' not implemented.");
+  if (
+    !drive_on_steered_wheel_ && (steering_actuator_.get_max_position() == 0 ||
+                                 steering_actuator_.get_max_position() > M_PI / 2 - 1e-9)) {
+    throw std::invalid_argument(
+      "BicycleVehicle::BicycleVehicle: 'steering_actuator.max_position' must be "
+      "nonzero and less than 90 degrees if 'drive_on_steered_wheel' is false.");
+  }
 }
 
 void BicycleVehicle::update(
@@ -215,6 +232,7 @@ DifferentialVehicle::DifferentialVehicle(rclcpp::Node & node, const std::string 
   drive_actuator_left_(DriveActuator(node, ns + ".drive_actuators")),
   drive_actuator_right_(DriveActuator(node, ns + ".drive_actuators"))
 {
+  CHECK_GT(track_, 0.0, "'" + ns + ".track' must be strictly positive.");
 }
 
 void DifferentialVehicle::update(

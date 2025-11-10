@@ -7,7 +7,9 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 #include <builtin_interfaces/msg/time.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
 #include <vehicle_dynamics_sim/vehicles.h>
@@ -20,6 +22,7 @@ public:
   SimNode();
 
 private:
+  void store_twist_reference(geometry_msgs::msg::Twist::SharedPtr msg);
   void store_twist_reference(geometry_msgs::msg::TwistStamped::SharedPtr msg);
   void tick_simulation();
 
@@ -36,13 +39,15 @@ private:
   geometry_msgs::msg::TwistStamped twist_reference_;
 
   // Subscribers
-  rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr sub_twist_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr sub_twist_;
+  rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr sub_twist_stamped_;
 
   // Publishers
   rclcpp::Publisher<builtin_interfaces::msg::Time>::SharedPtr pub_clock_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_tf_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_tf_static_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pub_twist_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 };

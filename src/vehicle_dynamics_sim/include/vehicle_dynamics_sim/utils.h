@@ -2,6 +2,7 @@
 #define VEHICLE_DYNAMICS_SIM_UTILS_H
 
 #include <cmath>
+#include <stdexcept>
 
 namespace vehicle_dynamics_sim
 {
@@ -25,6 +26,18 @@ inline double mod_2pi(double angle)
   while (angle >= 2 * M_PI) angle -= 2 * M_PI;
   while (angle < -2 * M_PI) angle += 2 * M_PI;
   return angle;
+}
+
+template<typename T>
+void CHECK_GE(const T& a, const T& b, const std::string& msg)
+{
+  if (!(a >= b)) throw std::invalid_argument(msg);
+}
+
+template<typename T>
+void CHECK_GT(const T& a, const T& b, const std::string& msg)
+{
+  if (!(a > b)) throw std::invalid_argument(msg);
 }
 }  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_UTILS_H
