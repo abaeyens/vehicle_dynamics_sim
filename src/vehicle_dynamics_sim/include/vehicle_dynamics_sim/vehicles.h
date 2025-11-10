@@ -86,8 +86,9 @@ class Vehicle : public ModelBase
 {
 public:
   Vehicle(rclcpp::Node & node, const std::string & ns);
-  std::pair<Eigen::Vector2d, double> get_pose();
-  inline double get_base_link_offset() { return base_link_offset_; }
+  std::string name() const;
+  std::pair<Eigen::Vector2d, double> get_pose() const;
+  inline double get_base_link_offset() const { return base_link_offset_; }
   virtual void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) = 0;
   inline geometry_msgs::msg::TwistStamped get_actual_twist() { return actual_twist_; }

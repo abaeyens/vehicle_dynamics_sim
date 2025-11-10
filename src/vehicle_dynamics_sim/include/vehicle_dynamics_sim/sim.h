@@ -4,11 +4,10 @@
 #include <memory>
 #include <string>
 
-#include <geometry_msgs/msg/twist_stamped.hpp>
-
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 #include <builtin_interfaces/msg/time.hpp>
+#include <geometry_msgs/msg/twist_stamped.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
 #include <vehicle_dynamics_sim/vehicles.h>
@@ -21,19 +20,20 @@ public:
   SimNode();
 
 private:
+  void store_twist_reference(geometry_msgs::msg::TwistStamped::SharedPtr msg);
   void tick_simulation();
 
   // Params
   const double step_rate_;
   const double pub_rate_;
-  const double reference_twist_max_oldness_;
+  const double twist_reference_max_oldness_;
   const bool be_reference_clock_;
 
   // State
   std::unique_ptr<Vehicle> vehicle_;
   rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
   rclcpp::Time previous_pub_time_{static_cast<int64_t>(0), RCL_ROS_TIME};
-  geometry_msgs::msg::TwistStamped reference_twist_;
+  geometry_msgs::msg::TwistStamped twist_reference_;
 
   // Subscribers
   rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr sub_twist_;

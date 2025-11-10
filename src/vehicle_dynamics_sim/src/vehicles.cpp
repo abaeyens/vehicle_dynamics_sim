@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 
+#include <boost/core/demangle.hpp>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <fmt/format.h>
@@ -138,7 +139,9 @@ Vehicle::Vehicle(rclcpp::Node & node, const std::string & ns)
 {
 }
 
-std::pair<Eigen::Vector2d, double> Vehicle::get_pose()
+std::string Vehicle::name() const { return boost::core::demangle(typeid(*this).name()); }
+
+std::pair<Eigen::Vector2d, double> Vehicle::get_pose() const
 {
   const Eigen::Vector2d position =
     position_ + Eigen::Vector2d{std::cos(heading_), std::sin(heading_)} * base_link_offset_;

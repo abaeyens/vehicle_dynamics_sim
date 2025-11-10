@@ -3,6 +3,7 @@
 #include <cmath>
 #include <memory>
 #include <stdexcept>
+#include <string>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -25,8 +26,8 @@ SimNode::SimNode()
 : rclcpp::Node("sim_node"),
   step_rate_(declare_and_get_parameter(*this, "step_rate", 1000.0)),
   pub_rate_(declare_and_get_parameter(*this, "pub_rate", 50.0)),
-  reference_twist_max_oldness_(
-    declare_and_get_parameter(*this, "reference_twist_max_oldness", 1.0)),
+  twist_reference_max_oldness_(
+    declare_and_get_parameter(*this, "twist_reference_max_oldness", 1.0)),
   be_reference_clock_(declare_and_get_parameter(*this, "be_reference_clock", false))
 {
   // Validate clock configuration
@@ -48,11 +49,13 @@ SimNode::SimNode()
     toVehicleName(declare_and_get_parameter(*this, "model", toString(VehicleName::BICYCLE)));
   const std::string ns = "model_params." + toString(vehicle_name);
   vehicle_ = toModelBase(vehicle_name, *this, ns);
+  RCLCPP_INFO(
+    this->get_logger(), fmt::format("Instantiated vehicle of name {}", vehicle_->name()).c_str());
 
   // Subscribers
   sub_twist_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
     "twist_reference", 10, [this](const geometry_msgs::msg::TwistStamped::SharedPtr msg) {
-      this->reference_twist_ = *msg;
+      this->store_twist_reference(msg);
     });
 
   // Publishers
@@ -82,6 +85,17 @@ SimNode::SimNode()
   }
 }
 
+void SimNode::store_twist_reference(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+{
+  twist_reference_ = *msg;
+  // Transform to base frame
+  const double& offset = vehicle_->get_base_link_offset();
+  if (offset != 0)
+  {
+    twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
+  }
+}
+
 void SimNode::tick_simulation()
 {
   // Update time
@@ -96,11 +110,11 @@ void SimNode::tick_simulation()
   }
 
   // If reference twist too old, substitute with zero
-  if ((time_ - reference_twist_.header.stamp).seconds() > reference_twist_max_oldness_)
-    reference_twist_ = geometry_msgs::msg::TwistStamped{};
+  if ((time_ - twist_reference_.header.stamp).seconds() > twist_reference_max_oldness_)
+    twist_reference_ = geometry_msgs::msg::TwistStamped{};
 
   // Simulate the vehicle
-  vehicle_->update(time_, reference_twist_);
+  vehicle_->update(time_, twist_reference_);
 
   // Clock
   if (be_reference_clock_ && pub_clock_)

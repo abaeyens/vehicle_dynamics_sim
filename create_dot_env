@@ -1,0 +1,6 @@
+#!/bin/bash
+{
+  echo "ROS_DISTRO=jazzy"
+  echo "USER_ID=$(id -u)"
+  echo "GROUP_ID=$(id -g)"
+} > .env

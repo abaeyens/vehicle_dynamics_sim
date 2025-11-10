@@ -11,6 +11,7 @@ find_package(builtin_interfaces)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
+find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
 
@@ -20,6 +21,7 @@ set(dependencies
   geometry_msgs
   std_msgs
   tf2_msgs
+  Boost
   fmt
 )
 
