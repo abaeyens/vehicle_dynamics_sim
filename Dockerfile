@@ -18,6 +18,7 @@ RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ros-$ROS_DISTRO-joint-state-publisher \
     ros-$ROS_DISTRO-joint-state-publisher-gui \
+    ros-$ROS_DISTRO-nav2* \
     ros-$ROS_DISTRO-plotjuggler-ros \
     ros-$ROS_DISTRO-rqt* \
     ros-$ROS_DISTRO-xacro \

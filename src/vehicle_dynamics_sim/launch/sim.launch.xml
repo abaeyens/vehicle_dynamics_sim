@@ -6,6 +6,7 @@
         <!--
         <param from="$(find-pkg-share vehicle_dynamics_sim)/params/all_vehicles.yaml"/>
         -->
+        <!-- TODO set back to bicycle -->
         <param name="model" value="differential"/>
     </node>
 </launch>

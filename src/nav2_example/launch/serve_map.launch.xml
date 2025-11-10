@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="nav2_map_server"
+          exec="map_server"
+          output="screen">
+        <param name="yaml_filename" value="$(find-pkg-share nav2_bringup)/maps/warehouse.yaml"/>
+    </node>
+    <node pkg="nav2_util" exec="lifecycle_bringup" args="map_server" output="screen"/>
+</launch>
