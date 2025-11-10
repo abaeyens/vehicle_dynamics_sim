@@ -1,0 +1,13 @@
+sim_node:
+  ros__parameters:
+    step_rate: 1000.0
+    pub_rate: 50.0
+    reference_twist_max_oldness: 1.0
+    be_reference_clock: false
+    model: bicycle
+
+    # TODO complete this
+    model_params:
+      bicycle:
+        base_link_offset: 0.0
+        reverse: false

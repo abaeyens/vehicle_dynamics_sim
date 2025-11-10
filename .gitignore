@@ -1,0 +1,8 @@
+install/
+build/
+log/
+*.ipynb_checkpoints
+*.pyc
+.bash_history
+.vscode/
+
