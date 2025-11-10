@@ -46,7 +46,7 @@ target_include_directories(sim_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_include_directories(sim_node PRIVATE)
-target_link_libraries(sim_node ${PROJECT_NAME} fmt)
+target_link_libraries(sim_node ${PROJECT_NAME} fmt::fmt)
 ament_target_dependencies(sim_node ${dependencies})
 
 
@@ -71,6 +71,12 @@ ament_export_dependencies(${dependencies})
 # executable
 install(TARGETS
   sim_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS
+    scripts/publish_some_velocities
   DESTINATION lib/${PROJECT_NAME}
 )
 

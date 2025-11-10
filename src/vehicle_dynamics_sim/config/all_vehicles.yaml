@@ -10,4 +10,21 @@ sim_node:
     model_params:
       bicycle:
         base_link_offset: 0.0
+        wheel_base: 2.0
+        drive_on_steered_wheel: yes
         reverse: false
+        drive_actuator:
+          time_constant: 0.2
+          max_acceleration: 1.0
+          max_velocity: 2.0
+        steering_actuator:
+          time_constant: 0.05
+          max_velocity: 2.0
+          max_position: 0.0
+      differential:
+        base_link_offset: 0.0
+        track: 0.8
+        drive_actuators:
+          time_constant: 0.2
+          max_acceleration: 1.0
+          max_velocity: 0.5

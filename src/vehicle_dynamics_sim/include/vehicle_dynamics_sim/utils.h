@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 /**
  * @brief bring angle in range [-pi, pi)
@@ -26,5 +26,5 @@ inline double mod_2pi(double angle)
   while (angle < -2 * M_PI) angle += 2 * M_PI;
   return angle;
 }
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_UTILS_H

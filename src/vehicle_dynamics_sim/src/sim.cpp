@@ -18,7 +18,7 @@
 #include <vehicle_dynamics_sim/sim.h>
 #include <vehicle_dynamics_sim/vehicles.h>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 
 SimNode::SimNode()
@@ -27,7 +27,7 @@ SimNode::SimNode()
   pub_rate_(declare_and_get_parameter(*this, "pub_rate", 50.0)),
   reference_twist_max_oldness_(
     declare_and_get_parameter(*this, "reference_twist_max_oldness", 1.0)),
-  be_reference_clock_(declare_and_get_parameter_bool(*this, "be_reference_clock", false))
+  be_reference_clock_(declare_and_get_parameter(*this, "be_reference_clock", false))
 {
   // Validate clock configuration
   {
@@ -90,6 +90,11 @@ void SimNode::tick_simulation()
   time_ = be_reference_clock_ ? time_ + rclcpp::Duration(0, static_cast<int32_t>(1e9 / step_rate_))
                               : this->get_clock()->now();
 
+  // Check that clock type of time is ROS_TIME
+  if (time_.get_clock_type() != RCL_ROS_TIME) {
+    throw std::invalid_argument("BicycleVehicle::update: time must use ROS_TIME clock type");
+  }
+
   // If reference twist too old, substitute with zero
   if ((time_ - reference_twist_.header.stamp).seconds() > reference_twist_max_oldness_)
     reference_twist_ = geometry_msgs::msg::TwistStamped{};
@@ -103,6 +108,8 @@ void SimNode::tick_simulation()
   // And finally, as applicable, publish the new simulation state
   if ((time_ - previous_pub_time_).seconds() > 1.0 / pub_rate_) {
     previous_pub_time_ = time_;
+    // Actual twist
+    pub_twist_->publish(vehicle_->get_actual_twist());
     // Pose (over tf)
     {
       geometry_msgs::msg::TransformStamped tf;
@@ -125,4 +132,4 @@ void SimNode::tick_simulation()
     }
   }
 }
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim

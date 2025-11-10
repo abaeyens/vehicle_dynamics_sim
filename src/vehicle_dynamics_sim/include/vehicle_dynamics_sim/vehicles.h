@@ -2,6 +2,7 @@
 #define VEHICLE_DYNAMICS_SIM_VEHICLES_H
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <string>
 
@@ -12,7 +13,7 @@
 #include <rclcpp/time.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 enum class VehicleName : uint8_t
 {
@@ -26,27 +27,41 @@ VehicleName toVehicleName(const std::string_view & name);
 
 class ModelBase
 {
-public:
-  ModelBase(rclcpp::Node & node) : node_(node) {}
-  virtual ~ModelBase() = default;
-
 protected:
-  rclcpp::Node & node_;
   rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
+};
+
+class DeadTimeDelay : public ModelBase
+{
+public:
+  DeadTimeDelay(rclcpp::Node & node, const std::string & ns);
+  void enter(const rclcpp::Time & time, const double value);
+  double get(const rclcpp::Time & time);
+
+private:
+  // Parameters
+  const double dead_time_;
+  // State
+  // oldest value first, newest last (timestamps increasing)
+  std::deque<std::pair<rclcpp::Time, double>> queue_;
 };
 
 class DriveActuator : public ModelBase
 {
 public:
   DriveActuator(rclcpp::Node & node, const std::string & ns);
-
+  inline double get_max_velocity() { return max_velocity_; }
   double get_new_velocity(const rclcpp::Time & time, const double & reference_velocity);
 
 private:
-  const double dead_time_;
-  // double time_constant_;
-  // double max_acceleration_;
-  // double max_velocity_;
+  // Parameters
+  const double max_velocity_;
+  const double time_constant_;
+  const double max_acceleration_;
+  // Submodels
+  DeadTimeDelay deadTimeDelay_;
+  // State
+  double prev_velocity_ = 0;
 };
 
 class SteeringActuator : public ModelBase
@@ -57,10 +72,14 @@ public:
   double get_new_position(const rclcpp::Time & time, const double & reference_position);
 
 private:
-  // double dead_time_;
-  // double time_constant_;
-  // double max_velocity_;
-  // double max_position_;
+  // Parameters
+  const double max_position_;
+  const double time_constant_;
+  const double max_velocity_;
+  // Submodels
+  DeadTimeDelay deadTimeDelay_;
+  // State
+  double prev_position_ = 0;
 };
 
 class Vehicle : public ModelBase
@@ -71,6 +90,7 @@ public:
   inline double get_base_link_offset() { return base_link_offset_; }
   virtual void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) = 0;
+  inline geometry_msgs::msg::TwistStamped get_actual_twist() { return actual_twist_; }
 
 protected:
   void store_actual_twist(
@@ -79,16 +99,16 @@ protected:
   // Parameters
   const double base_link_offset_;
   // State
-  Eigen::Vector2d position_;
-  double heading_;
+  Eigen::Vector2d position_ = Eigen::Vector2d::Zero();
+  double heading_ = 0;
   // For publishing thereafter
   geometry_msgs::msg::TwistStamped actual_twist_;
 };
 
-class BicycleModel : public Vehicle
+class BicycleVehicle : public Vehicle
 {
 public:
-  BicycleModel(rclcpp::Node & node, const std::string & ns);
+  BicycleVehicle(rclcpp::Node & node, const std::string & ns);
 
   void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) override;
@@ -96,13 +116,30 @@ public:
 private:
   // Params
   const double wheel_base_;
+  const bool drive_on_steered_wheel_;
   const bool reverse_;
   // Actuators
   DriveActuator drive_actuator_;
   SteeringActuator steering_actuator_;
 };
 
+class DifferentialVehicle : public Vehicle
+{
+public:
+  DifferentialVehicle(rclcpp::Node & node, const std::string & ns);
+
+  void update(
+    const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) override;
+
+private:
+  // Params
+  const double track_;
+  // Actuators
+  DriveActuator drive_actuator_left_;
+  DriveActuator drive_actuator_right_;
+};
+
 std::unique_ptr<Vehicle> toModelBase(
   const VehicleName model, rclcpp::Node & node, const std::string & ns);
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_VEHICLES_H

@@ -1,6 +1,10 @@
 #include <vehicle_dynamics_sim/vehicles.h>
 
+#include <algorithm>
 #include <cmath>
+#include <complex>
+#include <cstdint>
+#include <stdexcept>
 #include <string>
 
 #include <Eigen/Dense>
@@ -16,7 +20,7 @@
 #include <vehicle_dynamics_sim/declare_and_get_parameter.h>
 #include <vehicle_dynamics_sim/utils.h>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 std::string toString(const VehicleName & name)
 {
@@ -43,30 +47,94 @@ VehicleName toVehicleName(const std::string_view & name)
   throw std::invalid_argument(fmt::format("Unknown vehicle name: {}", name));
 }
 
+DeadTimeDelay::DeadTimeDelay(rclcpp::Node & node, const std::string & ns)
+: ModelBase(), dead_time_(declare_and_get_parameter(node, ns + ".dead_time", 0.2))
+{
+}
+
+void DeadTimeDelay::enter(const rclcpp::Time & time, const double value)
+{
+  if (!queue_.empty() && !(time >= queue_.back().first))
+    throw std::invalid_argument("DeadTimeDelay::enter: time must be increasing");
+  queue_.push_back({time, value});
+}
+
+double DeadTimeDelay::get(const rclcpp::Time & time)
+{
+  const rclcpp::Time fetch_time =
+    time - rclcpp::Duration(0, static_cast<int32_t>(1e9 * dead_time_));
+  while (queue_.size() > 1 && queue_[1].first < fetch_time) queue_.pop_front();
+  const auto & [timestamp, value] = queue_.front();
+  return timestamp <= fetch_time ? value : 0.0;
+}
+
 DriveActuator::DriveActuator(rclcpp::Node & node, const std::string & ns)
-: ModelBase(node), dead_time_(declare_and_get_parameter(node, ns + ".dead_time", 0.0))
+: ModelBase(),
+  max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
+  time_constant_(declare_and_get_parameter(node, ns + ".time_constant", 0.4)),
+  max_acceleration_(declare_and_get_parameter(node, ns + ".max_acceleration", 2.0)),
+  deadTimeDelay_(node, ns)
 {
 }
 
 double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double & reference_velocity)
 {
-  // TODO implement limits, LP filter etc.
+  // Dead time
+  deadTimeDelay_.enter(time, reference_velocity);
+  const double velocity_delayed = deadTimeDelay_.get(time);
+  // Velocity limits
+  const double velocity_limited = std::clamp(velocity_delayed, -max_velocity_, max_velocity_);
+  // Low pass effect
+  const double dt = (time - time_).seconds();
+  const double alpha = time_constant_ / (time_constant_ + dt);
+  const double velocity_delta = (1.0 - alpha) * (velocity_limited - prev_velocity_);
+  // Acceleration limits
+  const double velocity_delta_limited =
+    std::clamp(velocity_delta, -max_acceleration_ * dt, max_acceleration_ * dt);
+  // Apply final delta
+  const double velocity = prev_velocity_ + velocity_delta_limited;
+  // Keep for next iteration
   time_ = time;
-  return reference_velocity;
+  prev_velocity_ = velocity;
+  return velocity;
 }
 
-SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns) : ModelBase(node) {}
+SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
+: ModelBase(),
+  max_position_(declare_and_get_parameter(node, ns + ".max_position", M_PI / 6)),
+  time_constant_(declare_and_get_parameter(node, ns + ".time_constant", 0.05)),
+  max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
+  deadTimeDelay_(node, ns)
+{
+}
 
 double SteeringActuator::get_new_position(
   const rclcpp::Time & time, const double & reference_position)
 {
-  // TODO implement limits, LP filter etc.
+  // Dead time
+  deadTimeDelay_.enter(time, reference_position);
+  const double position_delayed = deadTimeDelay_.get(time);
+  // Position limits
+  const double position_limited = (max_position_ != 0)
+                                    ? std::clamp(position_delayed, -max_position_, max_position_)
+                                    : position_delayed;
+  // Low pass effect
+  const double dt = (time - time_).seconds();
+  const double alpha = time_constant_ / (time_constant_ + dt);
+  const double position_delta = (1.0 - alpha) * mod_pi(position_limited - prev_position_);
+  // Acceleration limits
+  const double position_delta_limited =
+    std::clamp(position_delta, -max_velocity_ * dt, max_velocity_ * dt);
+  // Apply final delta
+  const double position = mod_pi(prev_position_ + position_delta_limited);
+  // Keep for next iteration
   time_ = time;
-  return reference_position;
+  prev_position_ = position;
+  return position;
 }
 
 Vehicle::Vehicle(rclcpp::Node & node, const std::string & ns)
-: ModelBase(node), base_link_offset_(declare_and_get_parameter(node, ns + ".base_link_offset", 0.0))
+: ModelBase(), base_link_offset_(declare_and_get_parameter(node, ns + ".base_link_offset", 0.0))
 {
 }
 
@@ -90,34 +158,90 @@ void Vehicle::store_actual_twist(
   actual_twist_.twist.angular.z = oz;
 }
 
-BicycleModel::BicycleModel(rclcpp::Node & node, const std::string & ns)
+BicycleVehicle::BicycleVehicle(rclcpp::Node & node, const std::string & ns)
 : Vehicle(node, ns),
   wheel_base_(declare_and_get_parameter(node, ns + ".wheel_base", 2.0)),
-  reverse_(declare_and_get_parameter_bool(node, ns + ".reverse", false)),
+  drive_on_steered_wheel_(declare_and_get_parameter(node, ns + ".drive_on_steered_wheel", false)),
+  reverse_(declare_and_get_parameter(node, ns + ".reverse", false)),
   drive_actuator_(DriveActuator(node, ns + ".drive_actuator")),
   steering_actuator_(SteeringActuator(node, ns + ".steering_actuator"))
 {
 }
 
-void BicycleModel::update(
+void BicycleVehicle::update(
   const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist)
 {
-  const double timestep = (time - time_).seconds();
-  const double forward_velocity =
-    drive_actuator_.get_new_velocity(time, reference_twist.twist.linear.x);
-  double wheel_angle = 0;
-  if (std::abs(reference_twist.twist.linear.x) > 1e-12) {
-    const double reference_steering_position =
-      std::atan(wheel_base_ * reference_twist.twist.angular.z / reference_twist.twist.linear.x);
-    wheel_angle = steering_actuator_.get_new_position(time, reference_steering_position);
+  // TODO support reverse
+  // Figure out steering wheel angle
+  const bool can_derive_valid_steering_position =
+    std::abs(reference_twist.twist.linear.x) > 1e-12 ||
+    (drive_on_steered_wheel_ && std::abs(reference_twist.twist.angular.z) > 1e-12);
+  const double steering_position_ref =
+    can_derive_valid_steering_position
+      ? std::atan2(wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x)
+      : 0.0;
+  const double steering_position = steering_actuator_.get_new_position(time, steering_position_ref);
+  // Figure out resulting velocities
+  double v_forward = 0;
+  double v_angular = 0;
+  if (drive_on_steered_wheel_) {
+    const double drive_velocity_reference = std::norm(
+      std::complex<double>{
+        wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x});
+    const double steered_wheel_velocity =
+      drive_actuator_.get_new_velocity(time, drive_velocity_reference);
+    v_forward = steered_wheel_velocity * std::cos(steering_position);
+    v_angular = (steered_wheel_velocity / wheel_base_) * std::sin(steering_position);
+  } else {
+    v_forward = drive_actuator_.get_new_velocity(time, reference_twist.twist.linear.x);
+    v_angular = v_forward * std::tan(steering_position) / wheel_base_;
   }
-  const double angular_velocity = forward_velocity * std::tan(wheel_angle) / wheel_base_;
-  const double new_heading = mod_2pi(heading_ + timestep * angular_velocity);
-  const double mean_heading = mod_2pi(heading_ + mod_pi(new_heading - heading_));
-  position_ +=
-    Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * forward_velocity * timestep;
+  // Integrate
+  const double dt = (time - time_).seconds();
+  const double new_heading = mod_2pi(heading_ + dt * v_angular);
+  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
+  position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
   heading_ = new_heading;
-  store_actual_twist(time, forward_velocity, 0.0, angular_velocity);
+  store_actual_twist(time, v_forward, 0.0, v_angular);
+  time_ = time;
+}
+
+DifferentialVehicle::DifferentialVehicle(rclcpp::Node & node, const std::string & ns)
+: Vehicle(node, ns),
+  track_(declare_and_get_parameter(node, ns + ".track", 0.6)),
+  drive_actuator_left_(DriveActuator(node, ns + ".drive_actuators")),
+  drive_actuator_right_(DriveActuator(node, ns + ".drive_actuators"))
+{
+}
+
+void DifferentialVehicle::update(
+  const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist)
+{
+  // Preprocess: give priority to rotation (to stay closer to the intended kinematics)
+  // (usual for differential drive robots)
+  double v_ref_left =
+    reference_twist.twist.linear.x - 0.5 * track_ * reference_twist.twist.angular.z;
+  double v_ref_right =
+    reference_twist.twist.linear.x + 0.5 * track_ * reference_twist.twist.angular.z;
+  const double scale = std::max(
+    std::abs(v_ref_left) / drive_actuator_left_.get_max_velocity(),
+    std::abs(v_ref_right) / drive_actuator_right_.get_max_velocity());
+  if (scale > 1.0) {
+    v_ref_left /= scale;
+    v_ref_right /= scale;
+  }
+  // Simulate actuators
+  const double v_left = drive_actuator_left_.get_new_velocity(time, v_ref_left);
+  const double v_right = drive_actuator_right_.get_new_velocity(time, v_ref_right);
+  const double v_forward = 0.5 * (v_left + v_right);
+  const double v_angular = (v_right - v_left) / track_;
+  // Integrate
+  const double dt = (time - time_).seconds();
+  const double new_heading = mod_2pi(heading_ + dt * v_angular);
+  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
+  position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
+  heading_ = new_heading;
+  store_actual_twist(time, v_forward, 0.0, v_angular);
   time_ = time;
 }
 
@@ -126,7 +250,9 @@ std::unique_ptr<Vehicle> toModelBase(
 {
   switch (model) {
     case VehicleName::BICYCLE:
-      return std::make_unique<BicycleModel>(node, ns);
+      return std::make_unique<BicycleVehicle>(node, ns);
+    case VehicleName::DIFFERENTIAL:
+      return std::make_unique<DifferentialVehicle>(node, ns);
     default:
       // TODO
       throw std::invalid_argument(
@@ -136,4 +262,4 @@ std::unique_ptr<Vehicle> toModelBase(
   throw std::invalid_argument(
     fmt::format("Unknown model name enum value: {}", static_cast<int>(model)));
 }
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim

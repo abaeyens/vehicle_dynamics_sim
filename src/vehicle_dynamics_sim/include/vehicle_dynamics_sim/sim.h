@@ -13,7 +13,7 @@
 
 #include <vehicle_dynamics_sim/vehicles.h>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 class SimNode : public rclcpp::Node
 {
@@ -46,5 +46,5 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
 };
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_SIM_H

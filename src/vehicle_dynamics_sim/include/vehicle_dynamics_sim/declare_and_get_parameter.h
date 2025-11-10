@@ -6,7 +6,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-namespace sim
+namespace vehicle_dynamics_sim
 {
 
 double declare_and_get_parameter(
@@ -15,10 +15,10 @@ double declare_and_get_parameter(
 int64_t declare_and_get_parameter(
   rclcpp::Node & node, const std::string & key, const int64_t & default_value);
 
-bool declare_and_get_parameter_bool(
+bool declare_and_get_parameter(
   rclcpp::Node & node, const std::string & key, const bool & default_value);
 
 std::string declare_and_get_parameter(
   rclcpp::Node & node, const std::string & key, const std::string & default_value);
-}  // namespace sim
+}  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_DECLARE_AND_GET_PARAMETER_H
