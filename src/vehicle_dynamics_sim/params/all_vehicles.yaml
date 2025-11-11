@@ -4,6 +4,7 @@ sim_node:
     pub_rate: 50.0
     twist_reference_max_oldness: 1.0
     be_reference_clock: false
+    simulate_localization: true
     model: bicycle
 
     model_params:
@@ -30,3 +31,9 @@ sim_node:
           time_constant: 0.2
           max_acceleration: 1.0
           max_velocity: 0.5
+
+    localization:
+      odom_walk_velocity_translation: 0.0025
+      odom_walk_velocity_rotation: 0.0076
+      map_sample_noise_translation: 0.000025
+      map_sample_noise_rotation: 3.1e-6

@@ -3,10 +3,9 @@
 		  exec="sim_node"
 		  output="screen">
         <remap from="twist_reference" to="cmd_vel_nav"/>
-        <!--
         <param from="$(find-pkg-share vehicle_dynamics_sim)/params/all_vehicles.yaml"/>
-        -->
         <!-- TODO set back to bicycle -->
+        <param name="simulate_localization" value="true"/>
         <param name="model" value="differential"/>
     </node>
 </launch>

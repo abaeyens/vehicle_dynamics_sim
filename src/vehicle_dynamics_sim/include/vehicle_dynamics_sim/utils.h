@@ -34,8 +34,8 @@ void CHECK_GE(const T& a, const T& b, const std::string& msg)
   if (!(a >= b)) throw std::invalid_argument(msg);
 }
 
-template<typename T>
-void CHECK_GT(const T& a, const T& b, const std::string& msg)
+template <typename T>
+void CHECK_GT(const T & a, const T & b, const std::string & msg)
 {
   if (!(a > b)) throw std::invalid_argument(msg);
 }

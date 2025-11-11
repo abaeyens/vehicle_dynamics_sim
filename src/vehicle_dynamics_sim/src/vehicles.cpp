@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <boost/core/demangle.hpp>
 #include <Eigen/Dense>
@@ -19,6 +20,7 @@
 #include <std_msgs/msg/string.hpp>
 
 #include <vehicle_dynamics_sim/declare_and_get_parameter.h>
+#include <vehicle_dynamics_sim/Pose2D.h>
 #include <vehicle_dynamics_sim/utils.h>
 
 namespace vehicle_dynamics_sim
@@ -148,11 +150,11 @@ Vehicle::Vehicle(rclcpp::Node & node, const std::string & ns)
 
 std::string Vehicle::name() const { return boost::core::demangle(typeid(*this).name()); }
 
-std::pair<Eigen::Vector2d, double> Vehicle::get_pose() const
+Pose2D Vehicle::get_pose() const
 {
-  const Eigen::Vector2d position =
-    position_ + Eigen::Vector2d{std::cos(heading_), std::sin(heading_)} * base_link_offset_;
-  return std::make_pair(position, heading_);
+  return Pose2D{
+    position_.x() + std::cos(heading_) * base_link_offset_,
+    position_.y() + std::sin(heading_) * base_link_offset_, heading_};
 }
 
 void Vehicle::store_actual_twist(

@@ -18,19 +18,22 @@
 #include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
+#include <vehicle_dynamics_sim/conversions.h>
+#include <vehicle_dynamics_sim/localization.h>
+#include <vehicle_dynamics_sim/Pose2D.h>
 #include <vehicle_dynamics_sim/sim.h>
 #include <vehicle_dynamics_sim/vehicles.h>
 
 namespace vehicle_dynamics_sim
 {
-
 SimNode::SimNode()
 : rclcpp::Node("sim_node"),
   step_rate_(declare_and_get_parameter(*this, "step_rate", 1000.0)),
   pub_rate_(declare_and_get_parameter(*this, "pub_rate", 50.0)),
   twist_reference_max_oldness_(
     declare_and_get_parameter(*this, "twist_reference_max_oldness", 1.0)),
-  be_reference_clock_(declare_and_get_parameter(*this, "be_reference_clock", false))
+  be_reference_clock_(declare_and_get_parameter(*this, "be_reference_clock", false)),
+  simulate_localization_(declare_and_get_parameter(*this, "simulate_localization", true))
 {
   // Validate clock configuration
   {
@@ -53,6 +56,18 @@ SimNode::SimNode()
   vehicle_ = toModelBase(vehicle_name, *this, ns);
   RCLCPP_INFO(
     this->get_logger(), fmt::format("Instantiated vehicle of name {}", vehicle_->name()).c_str());
+
+  // Load localization and configure it
+  if (simulate_localization_) {
+    localization_ = std::make_unique<Localization>(*this, "localization");
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Set up localization simulation, will publish odom frame and noisy measurements.");
+  } else {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Localization will be ideal (no noise + 'odom' frame fixed to 'map' frame).");
+  }
 
   // Subscribers
   sub_twist_ = this->create_subscription<geometry_msgs::msg::Twist>(
@@ -84,8 +99,14 @@ SimNode::SimNode()
     {
       geometry_msgs::msg::TransformStamped tf;
       tf.header.frame_id = "base_link";
-      tf.child_frame_id = "rear_axle";
+      tf.child_frame_id = "fixed_axle";
       tf.transform.translation.x = -vehicle_->get_base_link_offset();
+      msg.transforms.push_back(tf);
+    }
+    if (!simulate_localization_) {
+      geometry_msgs::msg::TransformStamped tf;
+      tf.header.frame_id = "map";
+      tf.child_frame_id = "odom";
       msg.transforms.push_back(tf);
     }
     pub_tf_static_->publish(msg);
@@ -107,9 +128,8 @@ void SimNode::store_twist_reference(const geometry_msgs::msg::TwistStamped::Shar
 {
   twist_reference_ = *msg;
   // Transform to base frame
-  const double& offset = vehicle_->get_base_link_offset();
-  if (offset != 0)
-  {
+  const double & offset = vehicle_->get_base_link_offset();
+  if (offset != 0) {
     twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
   }
 }
@@ -142,41 +162,34 @@ void SimNode::tick_simulation()
     previous_pub_time_ = time_;
     // Actual twist
     pub_twist_->publish(vehicle_->get_actual_twist());
-    // Pose (over tf)
-    const auto [position, heading] = vehicle_->get_pose();
-    const Eigen::Quaterniond orientation =
-      Eigen::Quaterniond(Eigen::AngleAxisd(heading, Eigen::Vector3d::UnitZ()));
-    {
-      geometry_msgs::msg::TransformStamped tf;
-      tf.header.stamp = time_;
-      tf.header.frame_id = "map";
-      tf.child_frame_id = "base_link";
-      tf.transform.translation.x = position.x();
-      tf.transform.translation.y = position.y();
-      tf.transform.translation.z = 0;
-      tf.transform.rotation.x = orientation.x();
-      tf.transform.rotation.y = orientation.y();
-      tf.transform.rotation.z = orientation.z();
-      tf.transform.rotation.w = orientation.w();
+    if (simulate_localization_) {
+      // Pose (over tf)
+      if (!localization_) throw std::runtime_error("Localization not initialized");
+      const auto [T_M_O, T_O_B] = localization_->update(time_, vehicle_->get_pose());
+      const geometry_msgs::msg::TransformStamped tf_M_O =
+        to_transformstamped(T_M_O, time_, "map", "odom");
+      const geometry_msgs::msg::TransformStamped tf_O_B =
+        to_transformstamped(T_O_B, time_, "odom", "base_link");
       tf2_msgs::msg::TFMessage msg;
-      msg.transforms.push_back(tf);
+      msg.transforms.reserve(2);
+      msg.transforms.push_back(tf_M_O);
+      msg.transforms.push_back(tf_O_B);
       pub_tf_->publish(msg);
-    }
-    // Odometry (= twist + pose, Nav2 wants/needs this)
-    {
-      nav_msgs::msg::Odometry msg;
-      msg.header.stamp = time_;
-      msg.header.frame_id = "map";
-      msg.child_frame_id = "base_link";
-      msg.pose.pose.position.x = position.x();
-      msg.pose.pose.position.y = position.y();
-      msg.pose.pose.position.z = 0;
-      msg.pose.pose.orientation.x = orientation.x();
-      msg.pose.pose.orientation.y = orientation.y();
-      msg.pose.pose.orientation.z = orientation.z();
-      msg.pose.pose.orientation.w = orientation.w();
-      msg.twist.twist = vehicle_->get_actual_twist().twist;
-      pub_odom_->publish(msg);
+      // Odometry
+      // TODO simulate noise on velocity measurement here?
+      pub_odom_->publish(
+        to_odometry(T_O_B, vehicle_->get_actual_twist().twist, time_, "odom", "base_link"));
+    } else {
+      // Pose (over tf)
+      const Pose2D T_M_B = vehicle_->get_pose();
+      const geometry_msgs::msg::TransformStamped tf_M_B =
+        to_transformstamped(T_M_B, time_, "map", "base_link");
+      tf2_msgs::msg::TFMessage msg;
+      msg.transforms.push_back(tf_M_B);
+      pub_tf_->publish(msg);
+      // Odometry (= twist + pose, Nav2 wants/needs this)
+      pub_odom_->publish(
+        to_odometry(T_M_B, vehicle_->get_actual_twist().twist, time_, "map", "base_link"));
     }
   }
 }

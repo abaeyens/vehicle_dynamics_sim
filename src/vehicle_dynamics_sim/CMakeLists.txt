@@ -32,7 +32,10 @@ set(dependencies
 #########
 # library
 add_library(${PROJECT_NAME}
+  src/conversions.cpp
   src/declare_and_get_parameter.cpp
+  src/localization.cpp
+  src/Pose2D.cpp
   src/sim.cpp
   src/vehicles.cpp
 )
@@ -101,10 +104,14 @@ if(BUILD_TESTING)
   set(test_dependencies
     ament_index_cpp
   )
-  ament_add_gtest(test_sim test/test_sim.cpp)
-  target_link_libraries(test_sim ${PROJECT_NAME})
+  ament_add_gtest(test_all
+    test/test_all.cpp
+    test/test_Pose2D.cpp
+    test/test_sim.cpp
+  )
+  target_link_libraries(test_all ${PROJECT_NAME})
   ament_target_dependencies(
-      test_sim ${dependencies} ${test_dependencies})
+      test_all ${dependencies} ${test_dependencies})
 
   # Integration tests
   find_package(ament_cmake_ros REQUIRED)

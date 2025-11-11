@@ -5,6 +5,7 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
@@ -12,6 +13,9 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+
+#include <vehicle_dynamics_sim/localization.h>
+#include <vehicle_dynamics_sim/Pose2D.h>
 
 namespace vehicle_dynamics_sim
 {
@@ -87,7 +91,7 @@ class Vehicle : public ModelBase
 public:
   Vehicle(rclcpp::Node & node, const std::string & ns);
   std::string name() const;
-  std::pair<Eigen::Vector2d, double> get_pose() const;
+  Pose2D get_pose() const;
   inline double get_base_link_offset() const { return base_link_offset_; }
   virtual void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) = 0;

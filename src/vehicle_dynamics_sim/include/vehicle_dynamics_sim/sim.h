@@ -31,12 +31,14 @@ private:
   const double pub_rate_;
   const double twist_reference_max_oldness_;
   const bool be_reference_clock_;
+  const bool simulate_localization_;
 
   // State
-  std::unique_ptr<Vehicle> vehicle_;
+  std::unique_ptr<Vehicle> vehicle_{nullptr};
+  std::unique_ptr<Localization> localization_{nullptr};
   rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
   rclcpp::Time previous_pub_time_{static_cast<int64_t>(0), RCL_ROS_TIME};
-  geometry_msgs::msg::TwistStamped twist_reference_;
+  geometry_msgs::msg::TwistStamped twist_reference_{};
 
   // Subscribers
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr sub_twist_;
