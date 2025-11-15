@@ -54,7 +54,7 @@ SimNode::SimNode()
   const VehicleName vehicle_name =
     toVehicleName(declare_and_get_parameter(*this, "model", toString(VehicleName::BICYCLE)));
   const std::string ns = "model_params." + toString(vehicle_name);
-  vehicle_ = toModelBase(vehicle_name, *this, ns);
+  vehicle_ = to_vehicle(vehicle_name, *this, ns);
   RCLCPP_INFO(
     this->get_logger(), fmt::format("Instantiated vehicle of name {}", vehicle_->name()).c_str());
 
@@ -147,7 +147,7 @@ void SimNode::tick_simulation()
 
   // Check that clock type of time is ROS_TIME
   if (time_.get_clock_type() != RCL_ROS_TIME) {
-    throw std::invalid_argument("BicycleVehicle::update: time must use ROS_TIME clock type");
+    throw std::invalid_argument("SimNode::tick_simulation: time must use ROS_TIME clock type");
   }
 
   // If reference twist too old, substitute with zero

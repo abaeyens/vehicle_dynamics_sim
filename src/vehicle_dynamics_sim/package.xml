@@ -3,7 +3,7 @@
 <package format="3">
   <name>vehicle_dynamics_sim</name>
   <version>0.0.0</version>
-  <description>A fast vehicle dynamics simulator focusing on faithfull actuation limit simulation</description>
+  <description>A fast vehicle dynamics simulator focusing on faithful actuation limit simulation</description>
   <maintainer email="mail@arnebaeyens.com">Arne Baeyens</maintainer>
   <author email="mail@arnebaeyens.com">Arne Baeyens</author>
   <license>MIT</license>

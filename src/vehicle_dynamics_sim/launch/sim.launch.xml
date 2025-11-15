@@ -5,9 +5,8 @@
 		  output="screen">
         <remap from="twist_reference" to="cmd_vel_nav"/>
         <param from="$(find-pkg-share vehicle_dynamics_sim)/params/all_vehicles.yaml"/>
-        <!-- TODO set back to bicycle -->
         <param name="simulate_localization" value="true"/>
-        <param name="model" value="differential"/>
+        <param name="model" value="bicycle"/>
     </node>
     <!-- Robot description node, which publishes the static tfs
          as well as the dynamic tfs for the steered wheels -->

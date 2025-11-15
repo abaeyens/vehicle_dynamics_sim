@@ -359,7 +359,7 @@ void DifferentialVehicle::update(
   time_ = time;
 }
 
-std::unique_ptr<Vehicle> toModelBase(
+std::unique_ptr<Vehicle> to_vehicle(
   const VehicleName model, rclcpp::Node & node, const std::string & ns)
 {
   switch (model) {
