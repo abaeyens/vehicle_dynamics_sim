@@ -184,8 +184,6 @@ BicycleVehicle::BicycleVehicle(rclcpp::Node & node, const std::string & ns)
   steering_actuator_(SteeringActuator(node, ns + ".steering_actuator"))
 {
   CHECK_GT(wheel_base_, 0.0, "'" + ns + ".wheel_base' must be strictly positive.");
-  if (reverse_)
-    throw std::logic_error("BicycleVehicle::BicycleVehicle: 'reverse' not implemented.");
   if (
     !drive_on_steered_wheel_ && (steering_actuator_.get_max_position() == 0 ||
                                  steering_actuator_.get_max_position() > M_PI / 2 - 1e-9)) {
@@ -198,14 +196,15 @@ BicycleVehicle::BicycleVehicle(rclcpp::Node & node, const std::string & ns)
 void BicycleVehicle::update(
   const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist)
 {
-  // TODO support reverse
   // Figure out steering wheel angle
   const bool can_derive_valid_steering_position =
     std::abs(reference_twist.twist.linear.x) > 1e-12 ||
     (drive_on_steered_wheel_ && std::abs(reference_twist.twist.angular.z) > 1e-12);
+  const double rm = reverse_ ? -1.0 : 1.0;  // "rm" = Reverse Multiplier
   const double steering_position_ref =
     can_derive_valid_steering_position
-      ? std::atan2(wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x)
+      ? std::atan2(
+          rm * wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x)
       : 0.0;
   const double steering_position = steering_actuator_.get_new_position(time, steering_position_ref);
   // Figure out resulting velocities
@@ -218,10 +217,10 @@ void BicycleVehicle::update(
     const double steered_wheel_velocity =
       drive_actuator_.get_new_velocity(time, drive_velocity_reference);
     v_forward = steered_wheel_velocity * std::cos(steering_position);
-    v_angular = (steered_wheel_velocity / wheel_base_) * std::sin(steering_position);
+    v_angular = (steered_wheel_velocity / (rm * wheel_base_)) * std::sin(steering_position);
   } else {
     v_forward = drive_actuator_.get_new_velocity(time, reference_twist.twist.linear.x);
-    v_angular = v_forward * std::tan(steering_position) / wheel_base_;
+    v_angular = v_forward * std::tan(steering_position) / (rm * wheel_base_);
   }
   // Integrate
   const double dt = (time - time_).seconds();
@@ -234,11 +233,11 @@ void BicycleVehicle::update(
   joint_states_.header.stamp = time;
   if (vis_track_steered_ > 0) {
     // Two steering wheels spaced `vis_track_steered_` from each other
-    const double turning_radius = -wheel_base_ * std::tan(steering_position + M_PI / 2);
+    const double turning_radius = -rm * wheel_base_ * std::tan(steering_position + M_PI / 2);
     const double steering_left_wheel =
-      mod_pi(std::atan(-(turning_radius - vis_track_steered_ / 2) / wheel_base_) - M_PI / 2);
+      mod_pi(std::atan(-(turning_radius - vis_track_steered_ / 2) / (rm * wheel_base_)) - M_PI / 2);
     const double steering_right_wheel =
-      mod_pi(std::atan(-(turning_radius + vis_track_steered_ / 2) / wheel_base_) - M_PI / 2);
+      mod_pi(std::atan(-(turning_radius + vis_track_steered_ / 2) / (rm * wheel_base_)) - M_PI / 2);
     joint_states_.name = {"steering_left", "steering_right"};
     joint_states_.position = {steering_left_wheel, steering_right_wheel};
   } else {
@@ -274,21 +273,22 @@ std::string BicycleVehicle::get_robot_description() const
     urdf += create_fixed_joint("fixed_axle", "fixed_wheel");
   }
   // Wheel(s) on steered axle
+  const double rm = reverse_ ? -1.0 : 1.0;
   if (vis_track_steered_ > 0) {
     // Two steered wheels spaced `vis_track_fixed_` apart
     urdf += create_wheel("steered_wheel_right", vis_tire_diameter_, tire_width);
     urdf += create_steering_joint(
       "fixed_axle", "steered_wheel_right", "steering_right",
-      Eigen::Vector3d{wheel_base_, -vis_track_steered_ / 2.0, 0.0});
+      Eigen::Vector3d{rm * wheel_base_, -vis_track_steered_ / 2.0, 0.0});
     urdf += create_wheel("steered_wheel_left", vis_tire_diameter_, tire_width);
     urdf += create_steering_joint(
       "fixed_axle", "steered_wheel_left", "steering_left",
-      Eigen::Vector3d{wheel_base_, vis_track_steered_ / 2.0, 0.0});
+      Eigen::Vector3d{rm * wheel_base_, vis_track_steered_ / 2.0, 0.0});
   } else {
     // Single steered wheel
     urdf += create_wheel("steered_wheel", vis_tire_diameter_, tire_width);
     urdf += create_steering_joint(
-      "fixed_axle", "steered_wheel", "steering", Eigen::Vector3d{wheel_base_, 0.0, 0.0});
+      "fixed_axle", "steered_wheel", "steering", Eigen::Vector3d{rm * wheel_base_, 0.0, 0.0});
   }
   // Create body
   // TODO

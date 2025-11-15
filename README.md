@@ -428,7 +428,7 @@ Parameters at `sim_node` namespace level:
 |-----------|------|-------------|
 | `wheel_base` | double | Front-to-rear axle distance [m] |
 | `drive_on_steered_wheel` | bool | Front-wheel drive (true) or rear (false) |
-| `reverse` | bool | Enable reverse (NOT IMPLEMENTED) |
+| `reverse` | bool | if false, the steered axle is in front of the fixed axle, if true the steered axle is behind the fixed axle |
 | `vis_track_fixed` | double | Rear wheel spacing [m] (0 = single wheel) |
 | `vis_track_steered` | double | Front wheel spacing [m] (0 = single wheel) |
 | `vis_tire_diameter` | double | Wheel diameter for visualization [m] |
@@ -630,7 +630,6 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 - **Parameter helpers** ([`declare_and_get_parameter.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.h)) - ROS 2 parameter loading
 
 ## TODO
-- Implement reverse for bicycle vehicle.
 - Implement omni vehicle.
 - Add tests.
 
