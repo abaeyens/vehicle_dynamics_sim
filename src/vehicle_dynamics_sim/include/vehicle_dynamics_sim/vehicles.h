@@ -13,6 +13,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 #include <vehicle_dynamics_sim/localization.h>
 #include <vehicle_dynamics_sim/Pose2D.h>
@@ -92,10 +93,19 @@ public:
   Vehicle(rclcpp::Node & node, const std::string & ns);
   std::string name() const;
   Pose2D get_pose() const;
-  inline double get_base_link_offset() const { return base_link_offset_; }
+
   virtual void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) = 0;
-  inline geometry_msgs::msg::TwistStamped get_actual_twist() { return actual_twist_; }
+
+  /**
+   * @brief Generate URDF for visualization and kinematics.
+   * @return Complete URDF XML string with links, joints, and visual geometry
+   */
+  virtual std::string get_robot_description() const = 0;
+  // Getters
+  inline double get_base_link_offset() const { return base_link_offset_; }
+  inline geometry_msgs::msg::TwistStamped get_actual_twist() const { return actual_twist_; }
+  inline sensor_msgs::msg::JointState get_joint_states() const { return joint_states_; }
 
 protected:
   void store_actual_twist(
@@ -108,6 +118,7 @@ protected:
   double heading_ = 0;
   // For publishing thereafter
   geometry_msgs::msg::TwistStamped actual_twist_;
+  sensor_msgs::msg::JointState joint_states_;
 };
 
 class BicycleVehicle : public Vehicle
@@ -118,11 +129,16 @@ public:
   void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) override;
 
+  std::string get_robot_description() const override;
+
 private:
   // Params
   const double wheel_base_;
   const bool drive_on_steered_wheel_;
   const bool reverse_;
+  const double vis_track_fixed_;
+  const double vis_track_steered_;
+  const double vis_tire_diameter_;
   // Actuators
   DriveActuator drive_actuator_;
   SteeringActuator steering_actuator_;
@@ -136,9 +152,12 @@ public:
   void update(
     const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) override;
 
+  std::string get_robot_description() const override;
+
 private:
   // Params
   const double track_;
+  const double vis_tire_diameter_;
   // Actuators
   DriveActuator drive_actuator_left_;
   DriveActuator drive_actuator_right_;

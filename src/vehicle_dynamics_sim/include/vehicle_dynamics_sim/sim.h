@@ -10,6 +10,8 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
 #include <vehicle_dynamics_sim/vehicles.h>
@@ -48,6 +50,8 @@ private:
   rclcpp::Publisher<builtin_interfaces::msg::Time>::SharedPtr pub_clock_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_tf_;
   rclcpp::Publisher<tf2_msgs::msg::TFMessage>::SharedPtr pub_tf_static_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr pub_joint_states_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_robot_description_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pub_twist_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
 

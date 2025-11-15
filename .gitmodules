@@ -1,0 +1,3 @@
+[submodule "external/robot_state_publisher"]
+	path = external/robot_state_publisher
+	url = git@github.com:abaeyens/robot_state_publisher.git

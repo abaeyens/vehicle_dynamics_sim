@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Twist
 
 
 class VelocityPublisher(Node):
 	def __init__(self):
 		super().__init__('velocity_publisher')
-		self.publisher_ = self.create_publisher(TwistStamped, 'twist_reference', 10)
+		self.pub_twist_ = self.create_publisher(Twist, 'cmd_vel_nav', 10)
 		self.timer_period = 1.0/50.0
 		self.timer = self.create_timer(self.timer_period, self.timer_callback)
 		self.start_time = self.get_clock().now()
@@ -16,30 +16,28 @@ class VelocityPublisher(Node):
 	def timer_callback(self):
 		now = self.get_clock().now()
 		elapsed = (now - self.start_time).nanoseconds / 1e9
-		msg = TwistStamped()
-		msg.header.stamp = now.to_msg()
-		msg.header.frame_id = 'base_link'
+		twist = Twist()
 
 		if elapsed < 4.0:
-			msg.twist.linear.x = 2.5
-			msg.twist.angular.z = 0.0
+			twist.linear.x = 2.5
+			twist.angular.z = 0.0
 			self.get_logger().info('Driving forward...')
 		elif elapsed < 8.0:
-			msg.twist.linear.x = 2.0
-			msg.twist.angular.z = 0.5
+			twist.linear.x = 2.0
+			twist.angular.z = 0.5
 			self.get_logger().info('Driving in a circle...')
 		elif elapsed < 12.0:
-			msg.twist.linear.x = 0.0
-			msg.twist.angular.z = 0.5
+			twist.linear.x = 0.0
+			twist.angular.z = 0.5
 			self.get_logger().info('Driving an in place turn...')
 		else:
 			# Stop
-			msg.twist.linear.x = 0.0
-			msg.twist.angular.z = 0.0
+			twist.linear.x = 0.0
+			twist.angular.z = 0.0
 			self.get_logger().info('Stopping and shutting down node.')
-			self.publisher_.publish(msg)
+			self.pub_twist_.publish(twist)
 			raise KeyboardInterrupt()
-		self.publisher_.publish(msg)
+		self.pub_twist_.publish(twist)
 
 
 if __name__ == '__main__':

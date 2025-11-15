@@ -15,6 +15,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
@@ -85,6 +86,9 @@ SimNode::SimNode()
   pub_tf_ = this->create_publisher<tf2_msgs::msg::TFMessage>("/tf", 10);
   pub_tf_static_ = this->create_publisher<tf2_msgs::msg::TFMessage>(
     "/tf_static", rclcpp::QoS(10).transient_local());
+  pub_joint_states_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
+  pub_robot_description_ = this->create_publisher<std_msgs::msg::String>(
+    "/robot_description", rclcpp::QoS(1).transient_local());
   pub_twist_ = this->create_publisher<geometry_msgs::msg::TwistStamped>("twist_actual", 10);
   pub_odom_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
 
@@ -93,23 +97,22 @@ SimNode::SimNode()
     std::chrono::milliseconds(static_cast<int>(1000.0 / step_rate_)),
     std::bind(&SimNode::tick_simulation, this));
 
-  // Publish rear axle frame as static transform
-  {
+  if (!simulate_localization_) {
     tf2_msgs::msg::TFMessage msg;
-    {
-      geometry_msgs::msg::TransformStamped tf;
-      tf.header.frame_id = "base_link";
-      tf.child_frame_id = "fixed_axle";
-      tf.transform.translation.x = -vehicle_->get_base_link_offset();
-      msg.transforms.push_back(tf);
-    }
-    if (!simulate_localization_) {
-      geometry_msgs::msg::TransformStamped tf;
-      tf.header.frame_id = "map";
-      tf.child_frame_id = "odom";
-      msg.transforms.push_back(tf);
-    }
+    geometry_msgs::msg::TransformStamped tf;
+    tf.header.frame_id = "map";
+    tf.child_frame_id = "odom";
+    msg.transforms.push_back(tf);
     pub_tf_static_->publish(msg);
+  }
+
+  // Publish robot description
+  // used by the `robot_state_publisher` node to publish static and dynamic tfs,
+  // and by RViz to visualize the vehicle
+  {
+    std_msgs::msg::String msg;
+    msg.data = vehicle_->get_robot_description();
+    if (!msg.data.empty()) pub_robot_description_->publish(msg);
   }
 }
 
@@ -190,6 +193,11 @@ void SimNode::tick_simulation()
       // Odometry (= twist + pose, Nav2 wants/needs this)
       pub_odom_->publish(
         to_odometry(T_M_B, vehicle_->get_actual_twist().twist, time_, "map", "base_link"));
+    }
+    // Joint states
+    {
+      const sensor_msgs::msg::JointState msg = vehicle_->get_joint_states();
+      if (!msg.name.empty()) pub_joint_states_->publish(msg);
     }
   }
 }

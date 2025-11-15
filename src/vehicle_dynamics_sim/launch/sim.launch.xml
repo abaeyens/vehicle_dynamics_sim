@@ -1,4 +1,5 @@
 <launch>
+    <!-- The simulator -->
 	<node pkg="vehicle_dynamics_sim"
 		  exec="sim_node"
 		  output="screen">
@@ -8,4 +9,7 @@
         <param name="simulate_localization" value="true"/>
         <param name="model" value="differential"/>
     </node>
+    <!-- Robot description node, which publishes the static tfs
+         as well as the dynamic tfs for the steered wheels -->
+    <include file="$(find-pkg-share vehicle_dynamics_sim)/launch/robot_description.launch.py" />
 </launch>

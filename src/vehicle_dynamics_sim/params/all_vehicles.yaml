@@ -13,6 +13,9 @@ sim_node:
         wheel_base: 2.0
         drive_on_steered_wheel: yes
         reverse: false
+        vis_track_fixed: 1.4
+        vis_track_steered: 1.4
+        vis_tire_diameter: 0.5
         drive_actuator:
           dead_time: 0.2
           time_constant: 0.2
@@ -25,7 +28,8 @@ sim_node:
           max_position: 0.0
       differential:
         base_link_offset: 0.0
-        track: 0.8
+        track: 1.4
+        vis_tire_diameter: 0.5
         drive_actuators:
           dead_time: 0.2
           time_constant: 0.2

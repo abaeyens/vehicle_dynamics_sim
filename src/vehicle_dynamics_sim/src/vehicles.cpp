@@ -16,11 +16,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
-#include <std_msgs/msg/string.hpp>
 
 #include <vehicle_dynamics_sim/declare_and_get_parameter.h>
 #include <vehicle_dynamics_sim/Pose2D.h>
+#include <vehicle_dynamics_sim/urdf.h>
 #include <vehicle_dynamics_sim/utils.h>
 
 namespace vehicle_dynamics_sim
@@ -175,6 +176,10 @@ BicycleVehicle::BicycleVehicle(rclcpp::Node & node, const std::string & ns)
   wheel_base_(declare_and_get_parameter(node, ns + ".wheel_base", 2.0)),
   drive_on_steered_wheel_(declare_and_get_parameter(node, ns + ".drive_on_steered_wheel", false)),
   reverse_(declare_and_get_parameter(node, ns + ".reverse", false)),
+  vis_track_fixed_(declare_and_get_parameter(node, ns + ".vis_track_fixed", wheel_base_ * 0.7)),
+  vis_track_steered_(declare_and_get_parameter(node, ns + ".vis_track_steered", wheel_base_ * 0.7)),
+  vis_tire_diameter_(
+    declare_and_get_parameter(node, ns + ".vis_tire_diameter", wheel_base_ * 0.25)),
   drive_actuator_(DriveActuator(node, ns + ".drive_actuator")),
   steering_actuator_(SteeringActuator(node, ns + ".steering_actuator"))
 {
@@ -225,16 +230,102 @@ void BicycleVehicle::update(
   position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
   heading_ = new_heading;
   store_actual_twist(time, v_forward, 0.0, v_angular);
+  // Joint states
+  joint_states_.header.stamp = time;
+  if (vis_track_steered_ > 0) {
+    // Two steering wheels spaced `vis_track_steered_` from each other
+    const double turning_radius = -wheel_base_ * std::tan(steering_position + M_PI / 2);
+    const double steering_left_wheel =
+      mod_pi(std::atan(-(turning_radius - vis_track_steered_ / 2) / wheel_base_) - M_PI / 2);
+    const double steering_right_wheel =
+      mod_pi(std::atan(-(turning_radius + vis_track_steered_ / 2) / wheel_base_) - M_PI / 2);
+    joint_states_.name = {"steering_left", "steering_right"};
+    joint_states_.position = {steering_left_wheel, steering_right_wheel};
+  } else {
+    // Single steering wheel
+    joint_states_.name = {"steering"};
+    joint_states_.position = {mod_pi(steering_position)};
+  }
+  // Prepare for next callback
   time_ = time;
+}
+
+std::string BicycleVehicle::get_robot_description() const
+{
+  std::string urdf;
+  urdf += create_header(this->name());
+  urdf += create_link("base_link");
+  urdf += create_link("fixed_axle");
+  urdf += create_fixed_joint(
+    "base_link", "fixed_axle", Eigen::Vector3d{-base_link_offset_, 0.0, vis_tire_diameter_ / 2.0});
+  const double tire_width = vis_tire_diameter_ * 0.25;
+  // Wheel(s) on fixed axle
+  if (vis_track_fixed_ > 0) {
+    // Two wheels on fixed axle spaced `vis_track_fixed_` apart
+    urdf += create_wheel("fixed_wheel_right", vis_tire_diameter_, tire_width);
+    urdf += create_fixed_joint(
+      "fixed_axle", "fixed_wheel_right", Eigen::Vector3d{0.0, -vis_track_fixed_ / 2.0, 0.0});
+    urdf += create_wheel("fixed_wheel_left", vis_tire_diameter_, tire_width);
+    urdf += create_fixed_joint(
+      "fixed_axle", "fixed_wheel_left", Eigen::Vector3d{0.0, vis_track_fixed_ / 2.0, 0.0});
+  } else {
+    // Single wheel on fixed axle
+    urdf += create_wheel("fixed_wheel", vis_tire_diameter_, tire_width);
+    urdf += create_fixed_joint("fixed_axle", "fixed_wheel");
+  }
+  // Wheel(s) on steered axle
+  if (vis_track_steered_ > 0) {
+    // Two steered wheels spaced `vis_track_fixed_` apart
+    urdf += create_wheel("steered_wheel_right", vis_tire_diameter_, tire_width);
+    urdf += create_steering_joint(
+      "fixed_axle", "steered_wheel_right", "steering_right",
+      Eigen::Vector3d{wheel_base_, -vis_track_steered_ / 2.0, 0.0});
+    urdf += create_wheel("steered_wheel_left", vis_tire_diameter_, tire_width);
+    urdf += create_steering_joint(
+      "fixed_axle", "steered_wheel_left", "steering_left",
+      Eigen::Vector3d{wheel_base_, vis_track_steered_ / 2.0, 0.0});
+  } else {
+    // Single steered wheel
+    urdf += create_wheel("steered_wheel", vis_tire_diameter_, tire_width);
+    urdf += create_steering_joint(
+      "fixed_axle", "steered_wheel", "steering", Eigen::Vector3d{wheel_base_, 0.0, 0.0});
+  }
+  // Create body
+  // TODO
+  urdf += create_tail();
+  return urdf;
 }
 
 DifferentialVehicle::DifferentialVehicle(rclcpp::Node & node, const std::string & ns)
 : Vehicle(node, ns),
-  track_(declare_and_get_parameter(node, ns + ".track", 0.6)),
+  track_(declare_and_get_parameter(node, ns + ".track", 1.4)),
+  vis_tire_diameter_(declare_and_get_parameter(node, ns + ".vis_tire_diameter", track_ * 0.4)),
   drive_actuator_left_(DriveActuator(node, ns + ".drive_actuators")),
   drive_actuator_right_(DriveActuator(node, ns + ".drive_actuators"))
 {
   CHECK_GT(track_, 0.0, "'" + ns + ".track' must be strictly positive.");
+}
+
+std::string DifferentialVehicle::get_robot_description() const
+{
+  std::string urdf;
+  urdf += create_header(this->name());
+  urdf += create_link("base_link");
+  urdf += create_link("fixed_axle");
+  urdf += create_fixed_joint(
+    "base_link", "fixed_axle", Eigen::Vector3d{-base_link_offset_, 0.0, vis_tire_diameter_ / 2.0});
+  const double tire_width = vis_tire_diameter_ * 0.25;
+  // Two wheels on fixed axle spaced `track_` apart
+  urdf += create_wheel("fixed_wheel_right", vis_tire_diameter_, tire_width);
+  urdf +=
+    create_fixed_joint("fixed_axle", "fixed_wheel_right", Eigen::Vector3d{0.0, -track_ / 2.0, 0.0});
+  urdf += create_wheel("fixed_wheel_left", vis_tire_diameter_, tire_width);
+  urdf +=
+    create_fixed_joint("fixed_axle", "fixed_wheel_left", Eigen::Vector3d{0.0, track_ / 2.0, 0.0});
+  // Create body
+  // TODO
+  urdf += create_tail();
+  return urdf;
 }
 
 void DifferentialVehicle::update(

@@ -10,6 +10,7 @@ find_package(rclcpp REQUIRED)
 find_package(builtin_interfaces)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(Boost REQUIRED)
@@ -21,6 +22,7 @@ set(dependencies
   builtin_interfaces
   geometry_msgs
   nav_msgs
+  sensor_msgs
   std_msgs
   tf2_msgs
   Boost
@@ -37,6 +39,7 @@ add_library(${PROJECT_NAME}
   src/localization.cpp
   src/Pose2D.cpp
   src/sim.cpp
+  src/urdf.cpp
   src/vehicles.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
