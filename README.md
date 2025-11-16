@@ -1,12 +1,18 @@
 # Vehicle Dynamics Simulator
 
-A fast, high-fidelity ROS 2 vehicle dynamics simulator
-focused on realistic actuator dynamics and kinematics.
+An **easy to interface and configure** as well as **lightweight**
+ROS 2 vehicle dynamics simulator
+focused on **realistic actuator dynamics** and kinematics.
 Simulates vehicle motion with configurable delay, filtering,
 and acceleration/velocity limits
-to accurately represent real-world vehicle behavior.
+to accurately represent real world vehicle behavior.
 
-Main contents of this README:
+The main intended **use case** is as
+**development tool for trajectory following controllers**,
+such as those (RPP, MPPI etc.) part of the Nav2 stack,
+both in manual development and in automated testing pipelines.
+
+Key README contents:
 - [Quick Start](#quick-start)
 - [System Architecture](#system-architecture)
 - [Core Components](#core-components)
@@ -14,20 +20,26 @@ Main contents of this README:
 
 ## Features
 
-- **Multiple vehicle models**:
-  Bicycle (includes Ackermann), differential drive, omnidirectional
+- **Single-yaml config file**:
+  One ROS param file with doubles and bools to configure the vehicle.
+  No URDF or other additional files required.
+- **Three vehicle models**:
+  **Bicycle** (includes Ackermann), **differential** drive
+  and **omni**directional.
+  Many variations possible (see [Configuration](#configuration-reference)).
 - **Realistic actuator dynamics**:
-  Dead time delays, first order filtering, velocity/acceleration limits
-- **Localization simulation**:
-  Odometry drift and measurement noise for realistic sensor modeling
+  Dead time delays, first order filtering, velocity/acceleration limits.
+- **Realistic localization noise**:
+  Odometry drift and map pose measurement noise for realistic sensor
+  and fusio modelling, including the intermediate odom frame.
 - **Nav2 integration**:
   Full compatibility with Nav2 navigation stack
+  (publishes all the required topics + [example setup](src/nav2_example) provided).
 - **High frequency simulation**:
-  1000 Hz internal simulation with configurable output rates
+  1000 Hz internal simulation (publish rate configurable separately).
 - **RViz visualization**:
-  Real-time 3D vehicle visualization with joint states
-- **PlotJuggler integration**:
-  Pre-configured layouts for analyzing vehicle behavior
+  Real time 3D vehicle visualization with joint states
+  (URDF generated exclusively from ROS parameters).
 - **Flexible clock modes**:
   Can follow wall clock, external simulation time (`/clock` topic)
   or act as time source.
@@ -237,6 +249,9 @@ flowchart TB
     
     style SimNode fill:#e1f5ff
     style Vehicle fill:#fff4e1
+    style BP fill:#d9ffd9
+    style Drive fill:#ffe1e1
+    style Steer fill:#ffe1e1
     style D1 fill:#d955d9
     style D2 fill:#d955d9
     style D3 fill:#d955d9
@@ -245,16 +260,14 @@ flowchart TB
     style S2 fill:#d955d9
     style S3 fill:#d955d9
     style S4 fill:#d955d9
-    style BP fill:#d9ffd9
-    style Drive fill:#ffe1e1
-    style Steer fill:#ffe1e1
+    style Kin fill:#d9ffd9
     style Loc fill:#f5e1ff
     style RSP fill:#fff0b3
 ```
 
 The current dynamics puts the inertia in the actuator objects;
-perhaps we'll deviate from that in the future in case it turns out
-that this approach is not sufficiently true to the real world.
+for some vehicles, like the omnidirectional one, this is not ideal.
+Likely we'll therefore deviate from that in the future.
 
 ## Core Components
 
@@ -305,7 +318,8 @@ v_angular = v_forward * tan(steering_angle) / wheelbase
 **Key Parameters:**
 - `wheel_base`: Distance between front and rear axles [m]
 - `drive_on_steered_wheel`: Front wheel drive (true) or rear wheel drive (false)
-- `vis_track_fixed/steered`: (visualization only) Wheel spacing [m]
+- `track_steered`: Wheel spacing steered axle [m]
+- `vis_track_fixed`: (visualization only) Wheel spacing fixed axle [m]
 - `vis_tire_diameter`: (visualization only) Wheel diameter [m]
 
 **Use cases:** Cars, Ackermann robots, outdoor autonomous vehicles
@@ -419,7 +433,7 @@ Parameters at `sim_node` namespace level:
 |-----------|------|---------|-------------|
 | `step_rate` | double | 1000.0 | Internal simulation frequency [Hz] |
 | `pub_rate` | double | 50.0 | Output publishing frequency [Hz] |
-| `twist_reference_max_oldness` | double | 1.0 | Max age for commands before zeroing [s] |
+| `twist_reference_max_oldness` | double | 1.0 | Max age of commands before zeroing them out [s] |
 | `be_reference_clock` | bool | false | Publish clock messages (sim time source) |
 | `simulate_localization` | bool | false | Enable localization error simulation |
 | `model` | string | "bicycle" | Vehicle type ("bicycle", "differential", "omni") |
@@ -436,7 +450,7 @@ Parameters at `sim_node` namespace level:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `wheel_base` | double | Front-to-rear axle distance [m] |
-| `drive_on_steered_wheel` | bool | Front-wheel drive (true) or rear (false) |
+| `drive_on_steered_wheel` | bool | if false, drive on fixed axle, if true drive on the steered wheel(s) |
 | `reverse` | bool | if false, the steered axle is in front of the fixed axle, if true the steered axle is behind the fixed axle |
 | `vis_track_fixed` | double | Rear wheel spacing [m] (0 = single wheel) |
 | `vis_track_steered` | double | Front wheel spacing [m] (0 = single wheel) |
@@ -447,7 +461,7 @@ Parameters at `sim_node` namespace level:
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `track` | double | Left-to-right wheel distance [m] |
-| `vis_tire_diameter` | double | Wheel diameter for visualization [m] |
+| `vis_tire_diameter` | double | Wheel diameter, for visualization [m] |
 
 ### Actuator Parameters
 
@@ -465,10 +479,10 @@ Common structure for `drive_actuator` and `steering_actuator`:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `odom_walk_velocity_translation` | double | Translation drift variance [m²/m] |
-| `odom_walk_velocity_rotation` | double | Rotation drift variance [rad²/m] |
-| `map_sample_noise_translation` | double | Map noise variance [m²/s] |
-| `map_sample_noise_rotation` | double | Map noise variance [rad²/s] |
+| `odom_walk_velocity_translation` | double | Drift random walk velocity - translational [m²/m] |
+| `odom_walk_velocity_rotation` | double | Drift random walk velocity - rotational [rad²/m] |
+| `map_sample_noise_translation` | double | Map -> base_link localization noise density - translational [m²/s] |
+| `map_sample_noise_rotation` | double | Map -> base_link localization noise density - rotational [rad²/s] |
 
 **Note:** All noise parameters are variances (σ²), not standard deviations.  
 **Example:** `odom_walk_velocity_translation: 0.0025` means σ = 0.05 m per meter traveled.
@@ -498,6 +512,9 @@ Overview (more detailed description after the table):
 - Other nodes must set `use_sim_time: true`
 
 ### Example Configurations
+**Note:**
+See also [all_vehicles.yaml](src/vehicle_dynamics_sim/params/all_vehicles.yaml)
+for a list of (almost all) parameters.
 
 #### Ackermann Car for Navigation
 
@@ -510,11 +527,32 @@ sim_node:
         wheel_base: 2.7  # Typical car wheelbase
         drive_on_steered_wheel: false  # Rear-wheel drive
         vis_track_steered: 1.5
+        vis_track_fixed: 1.5
         drive_actuator:
           max_velocity: 15.0  # ~54 km/h
           max_acceleration: 3.0
         steering_actuator:
           max_position: 0.61  # ~35 degrees
+```
+
+#### Small forklift for Navigation
+
+```yaml
+sim_node:
+  ros__parameters:
+    model: bicycle
+    model_params:
+      bicycle:
+        wheel_base: 2.0
+        reverse: true  # steered wheel behind fixed axle
+        drive_on_steered_wheel: true
+        vis_track_fixed: 1.1
+        vis_track_steered: 0.0  # single rear wheel
+        drive_actuator:
+          max_velocity: 5.0  # 18 km/h
+          max_acceleration: 3.0
+        steering_actuator:
+          max_position: 0.0  # can turn all around
 ```
 
 #### Indoor Mobile Robot
@@ -639,6 +677,7 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 - **Parameter helpers** ([`declare_and_get_parameter.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.h)) - ROS 2 parameter loading
 
 ## TODO
+- Support running faster than real time.
 
 ## Contributing
 
