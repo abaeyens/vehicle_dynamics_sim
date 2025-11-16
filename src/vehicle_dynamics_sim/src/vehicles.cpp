@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <complex>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -83,7 +82,7 @@ DriveActuator::DriveActuator(rclcpp::Node & node, const std::string & ns)
 {
   CHECK_GE(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be positive.");
   CHECK_GE(time_constant_, 0.0, "'" + ns + ".time_constant' must be positive.");
-  CHECK_GT(max_acceleration_, 0.0, "'" + ns + ".max_acceleration' must be strictly positive.");
+  CHECK_GE(max_acceleration_, 0.0, "'" + ns + ".max_acceleration' must be positive.");
 }
 
 double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double & reference_velocity)
@@ -92,14 +91,18 @@ double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double &
   deadTimeDelay_.enter(time, reference_velocity);
   const double velocity_delayed = deadTimeDelay_.get(time);
   // Velocity limits
-  const double velocity_limited = std::clamp(velocity_delayed, -max_velocity_, max_velocity_);
+  const double velocity_limited = max_velocity_ > 0
+                                    ? std::clamp(velocity_delayed, -max_velocity_, max_velocity_)
+                                    : velocity_delayed;
   // Low pass effect
   const double dt = (time - time_).seconds();
-  const double alpha = time_constant_ / (time_constant_ + dt);
+  const double alpha = time_constant_ > 0 ? std::exp(-dt / time_constant_) : 0.0;
   const double velocity_delta = (1.0 - alpha) * (velocity_limited - prev_velocity_);
   // Acceleration limits
   const double velocity_delta_limited =
-    std::clamp(velocity_delta, -max_acceleration_ * dt, max_acceleration_ * dt);
+    max_acceleration_ > 0
+      ? std::clamp(velocity_delta, -max_acceleration_ * dt, max_acceleration_ * dt)
+      : velocity_delta;
   // Apply final delta
   const double velocity = prev_velocity_ + velocity_delta_limited;
   // Keep for next iteration
@@ -117,7 +120,7 @@ SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
 {
   CHECK_GE(max_position_, 0.0, "'" + ns + ".max_position' must be positive.");
   CHECK_GE(time_constant_, 0.0, "'" + ns + ".time_constant' must be positive.");
-  CHECK_GT(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be strictly positive.");
+  CHECK_GE(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be positive.");
 }
 
 double SteeringActuator::get_new_position(
@@ -132,11 +135,12 @@ double SteeringActuator::get_new_position(
                                     : position_delayed;
   // Low pass effect
   const double dt = (time - time_).seconds();
-  const double alpha = time_constant_ / (time_constant_ + dt);
+  const double alpha = time_constant_ > 0 ? std::exp(-dt / time_constant_) : 0.0;
   const double position_delta = (1.0 - alpha) * mod_pi(position_limited - prev_position_);
   // Acceleration limits
   const double position_delta_limited =
-    std::clamp(position_delta, -max_velocity_ * dt, max_velocity_ * dt);
+    max_velocity_ > 0 ? std::clamp(position_delta, -max_velocity_ * dt, max_velocity_ * dt)
+                      : position_delta;
   // Apply final delta
   const double position = mod_pi(prev_position_ + position_delta_limited);
   // Keep for next iteration
@@ -207,14 +211,16 @@ void BicycleVehicle::update(
       ? std::atan2(
           rm * wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x)
       : 0.0;
+  // TODO take 180° difference if that's closer to the wheel's current position,
+  // and adjust reference velocity as required
   const double steering_position = steering_actuator_.get_new_position(time, steering_position_ref);
   // Figure out resulting velocities
   double v_forward = 0;
   double v_angular = 0;
   if (drive_on_steered_wheel_) {
-    const double drive_velocity_reference = std::norm(
-      std::complex<double>{
-        wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x});
+    const double a = reference_twist.twist.linear.x;
+    const double b = wheel_base_ * reference_twist.twist.angular.z;
+    const double drive_velocity_reference = std::sqrt(a * a + b * b);
     const double steered_wheel_velocity =
       drive_actuator_.get_new_velocity(time, drive_velocity_reference);
     v_forward = steered_wheel_velocity * std::cos(steering_position);
@@ -357,6 +363,7 @@ void DifferentialVehicle::update(
   position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
   heading_ = new_heading;
   store_actual_twist(time, v_forward, 0.0, v_angular);
+  // Prepare for next callback
   time_ = time;
 }
 
@@ -410,7 +417,7 @@ void OmniVehicle::update(
   // Figure out movement (solve using least squares, minimizing slip)
   Eigen::Matrix<double, 4, 3> A;
   A.block<4, 1>(0, 0) = motor_alphas;
-  A.block<4, 1>(0, 1) = -Eigen::Vector4d::Ones();
+  A.block<4, 1>(0, 1) = Eigen::Vector4d::Ones();
   A.block<4, 1>(0, 2) = motor_positions.block<4, 1>(0, 0) -
                         motor_alphas.cwiseProduct(motor_positions.block<4, 1>(0, 1));
   const Eigen::Vector4d b = motor_actual_velocities;

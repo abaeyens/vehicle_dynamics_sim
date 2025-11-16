@@ -77,6 +77,15 @@ docker exec -it sim bash
 ros2 run vehicle_dynamics_sim publish_some_velocities
 ```
 
+If desired, run unit and integration tests and print the results:
+```bash
+colcon test --packages-select vehicle_dynamics_sim
+xunit-viewer -r build/vehicle_dynamics_sim/test_results -c
+```
+All tests run sequentially,
+allowing supervision of the vehicle movements in RViz and PlotJuggler.
+See also [src/vehicle_dynamics_sim/test/README.md](src/vehicle_dynamics_sim/test/README.md).
+
 ## Visualization
 
 ### RViz
@@ -412,7 +421,7 @@ Parameters at `sim_node` namespace level:
 | `pub_rate` | double | 50.0 | Output publishing frequency [Hz] |
 | `twist_reference_max_oldness` | double | 1.0 | Max age for commands before zeroing [s] |
 | `be_reference_clock` | bool | false | Publish clock messages (sim time source) |
-| `simulate_localization` | bool | true | Enable localization errors |
+| `simulate_localization` | bool | false | Enable localization error simulation |
 | `model` | string | "bicycle" | Vehicle type ("bicycle", "differential", "omni") |
 
 ### Vehicle Parameters
@@ -630,7 +639,6 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 - **Parameter helpers** ([`declare_and_get_parameter.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.h)) - ROS 2 parameter loading
 
 ## TODO
-- Add tests.
 
 ## Contributing
 

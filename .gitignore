@@ -1,6 +1,8 @@
+index.html
 install/
 build/
 log/
+*__pycache__/
 *.ipynb_checkpoints
 *.pyc
 .bash_history

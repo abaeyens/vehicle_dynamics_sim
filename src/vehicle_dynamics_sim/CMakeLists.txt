@@ -104,13 +104,16 @@ if(BUILD_TESTING)
   # C++ unit tests
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_index_cpp REQUIRED)
+  find_package(robot_state_publisher)
   set(test_dependencies
     ament_index_cpp
+    robot_state_publisher
   )
   ament_add_gtest(test_all
     test/test_all.cpp
     test/test_Pose2D.cpp
-    test/test_sim.cpp
+    test/test_utils.cpp
+    test/test_vehicles.cpp
   )
   target_link_libraries(test_all ${PROJECT_NAME})
   ament_target_dependencies(
@@ -123,8 +126,13 @@ if(BUILD_TESTING)
     set(RUNNER "${ament_cmake_ros_DIR}/run_test_isolated.py")
     add_launch_test("${path}" RUNNER "${RUNNER}" ${ARGN})
   endfunction()
-  # TODO put some here
-  #add_ros_isolated_launch_test(test/test_in_simulation.py)
+  add_ros_isolated_launch_test(test/test_smoke.py)
+  add_ros_isolated_launch_test(test/test_vehicles_bicycle_front_steer_rear_drive.py)
+  add_ros_isolated_launch_test(test/test_vehicles_bicycle_front_steer_front_drive.py)
+  add_ros_isolated_launch_test(test/test_vehicles_bicycle_rear_steer_rear_drive.py)
+  add_ros_isolated_launch_test(test/test_vehicles_bicycle_rear_steer_front_drive.py)
+  add_ros_isolated_launch_test(test/test_vehicles_differential.py)
+  add_ros_isolated_launch_test(test/test_vehicles_omni.py)
 endif()
 
 ament_package()

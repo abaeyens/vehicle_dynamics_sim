@@ -30,6 +30,10 @@ class VelocityPublisher(Node):
 			twist.linear.x = 0.0
 			twist.angular.z = 0.5
 			self.get_logger().info('Driving an in place turn...')
+		elif elapsed < 16.0:
+			twist.linear.x = 0.0
+			twist.angular.z = -0.5
+			self.get_logger().info('Driving an in place turn other direction...')
 		else:
 			# Stop
 			twist.linear.x = 0.0

@@ -5,10 +5,13 @@
 		  output="screen">
         <remap from="twist_reference" to="cmd_vel_nav"/>
         <param from="$(find-pkg-share vehicle_dynamics_sim)/params/all_vehicles.yaml"/>
-        <param name="simulate_localization" value="true"/>
-        <param name="model" value="bicycle"/>
+        <!-- If desired, can overrule parameters from all_vehicles.yaml ... -->
+        <!--
+        <param name="simulate_localization" value="false"/>
+        <param name="model" value="differential"/>
+        -->
     </node>
     <!-- Robot description node, which publishes the static tfs
          as well as the dynamic tfs for the steered wheels -->
-    <include file="$(find-pkg-share vehicle_dynamics_sim)/launch/robot_description.launch.py" />
+    <include file="$(find-pkg-share vehicle_dynamics_sim)/launch/robot_state_publisher.launch.py" />
 </launch>

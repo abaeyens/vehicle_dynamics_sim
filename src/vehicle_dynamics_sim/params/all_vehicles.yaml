@@ -4,7 +4,7 @@ sim_node:
     pub_rate: 50.0
     twist_reference_max_oldness: 1.0
     be_reference_clock: false
-    simulate_localization: true
+    simulate_localization: false
     model: bicycle
 
     model_params:

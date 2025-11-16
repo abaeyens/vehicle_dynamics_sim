@@ -26,6 +26,8 @@ enum class VehicleName : uint8_t
   DIFFERENTIAL,
   OMNI,
 };
+static constexpr auto ALL_VEHICLE_NAMES =
+  std::array{VehicleName::BICYCLE, VehicleName::DIFFERENTIAL, VehicleName::OMNI};
 
 /**
  * @brief Convert a VehicleName enum value to its string representation.
@@ -62,6 +64,7 @@ public:
    * @param ns Parameter namespace (e.g., "vehicle.drive_actuator")
    */
   DeadTimeDelay(rclcpp::Node & node, const std::string & ns);
+  DeadTimeDelay(double dead_time) : ModelBase(), dead_time_(dead_time) {}
 
   /**
    * @brief Add a time-stamped value to the delay queue.
@@ -99,6 +102,15 @@ public:
    * @param ns Parameter namespace (e.g., "vehicle.drive_actuator")
    */
   DriveActuator(rclcpp::Node & node, const std::string & ns);
+  DriveActuator(
+    double max_velocity, double time_constant, double max_acceleration, double dead_time)
+  : ModelBase(),
+    max_velocity_(max_velocity),
+    time_constant_(time_constant),
+    max_acceleration_(max_acceleration),
+    deadTimeDelay_(dead_time)
+  {
+  }
 
   inline double get_max_velocity() const { return max_velocity_; }
 
@@ -135,6 +147,14 @@ public:
    * @param ns Parameter namespace (e.g., "vehicle.steering_actuator")
    */
   SteeringActuator(rclcpp::Node & node, const std::string & ns);
+  SteeringActuator(double max_position, double time_constant, double max_velocity, double dead_time)
+  : ModelBase(),
+    max_position_(max_position),
+    time_constant_(time_constant),
+    max_velocity_(max_velocity),
+    deadTimeDelay_(dead_time)
+  {
+  }
 
   inline double get_max_position() const { return max_position_; }
 

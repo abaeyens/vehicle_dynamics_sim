@@ -1,7 +1,5 @@
 #include <vehicle_dynamics_sim/Pose2D.h>
 
-#include <iostream>
-
 #include <cmath>
 #include <stdexcept>
 
