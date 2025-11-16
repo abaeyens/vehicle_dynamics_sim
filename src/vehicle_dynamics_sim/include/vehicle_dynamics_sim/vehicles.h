@@ -157,6 +157,7 @@ public:
   }
 
   inline double get_max_position() const { return max_position_; }
+  inline double get_current_position() const { return prev_position_; }
 
   /**
    * @brief Compute actuator output steering angle after applying all dynamic constraints.

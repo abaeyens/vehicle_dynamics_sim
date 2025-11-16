@@ -126,8 +126,10 @@ SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
 double SteeringActuator::get_new_position(
   const rclcpp::Time & time, const double & reference_position)
 {
+  // Bring in range [-M_PI, M_PI)
+  const double reference_position_std = mod_pi(reference_position);
   // Dead time
-  deadTimeDelay_.enter(time, reference_position);
+  deadTimeDelay_.enter(time, reference_position_std);
   const double position_delayed = deadTimeDelay_.get(time);
   // Position limits
   const double position_limited = (max_position_ != 0)
@@ -211,9 +213,13 @@ void BicycleVehicle::update(
       ? std::atan2(
           rm * wheel_base_ * reference_twist.twist.angular.z, reference_twist.twist.linear.x)
       : 0.0;
-  // TODO take 180° difference if that's closer to the wheel's current position,
-  // and adjust reference velocity as required
-  const double steering_position = steering_actuator_.get_new_position(time, steering_position_ref);
+  const double dsp = steering_position_ref - steering_actuator_.get_current_position();
+  const bool better_invert_velocity_and_steering_reference =
+    std::abs(mod_pi(dsp)) > std::abs(mod_pi(dsp + M_PI));
+  // "vm" = Velocity Multiplier
+  const double vm = better_invert_velocity_and_steering_reference ? -1.0 : 1.0;
+  const double steering_position = steering_actuator_.get_new_position(
+    time, steering_position_ref + (better_invert_velocity_and_steering_reference ? M_PI : 0.0));
   // Figure out resulting velocities
   double v_forward = 0;
   double v_angular = 0;
@@ -222,7 +228,7 @@ void BicycleVehicle::update(
     const double b = wheel_base_ * reference_twist.twist.angular.z;
     const double drive_velocity_reference = std::sqrt(a * a + b * b);
     const double steered_wheel_velocity =
-      drive_actuator_.get_new_velocity(time, drive_velocity_reference);
+      drive_actuator_.get_new_velocity(time, vm * drive_velocity_reference);
     v_forward = steered_wheel_velocity * std::cos(steering_position);
     v_angular = (steered_wheel_velocity / (rm * wheel_base_)) * std::sin(steering_position);
   } else {
@@ -241,10 +247,14 @@ void BicycleVehicle::update(
   if (vis_track_steered_ > 0) {
     // Two steering wheels spaced `vis_track_steered_` from each other
     const double turning_radius = -rm * wheel_base_ * std::tan(steering_position + M_PI / 2);
-    const double steering_left_wheel =
+    double steering_left_wheel =
       mod_pi(std::atan(-(turning_radius - vis_track_steered_ / 2) / (rm * wheel_base_)) - M_PI / 2);
-    const double steering_right_wheel =
+    if (std::abs(mod_pi(steering_left_wheel - steering_position)) > M_PI / 2.0 + 1e-6)
+      steering_left_wheel = mod_pi(steering_left_wheel + M_PI);
+    double steering_right_wheel =
       mod_pi(std::atan(-(turning_radius + vis_track_steered_ / 2) / (rm * wheel_base_)) - M_PI / 2);
+    if (std::abs(mod_pi(steering_right_wheel - steering_position)) > M_PI / 2.0 + 1e-6)
+      steering_right_wheel = mod_pi(steering_right_wheel + M_PI);
     joint_states_.name = {"steering_left", "steering_right"};
     joint_states_.position = {steering_left_wheel, steering_right_wheel};
   } else {
