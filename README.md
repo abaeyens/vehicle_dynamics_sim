@@ -630,7 +630,6 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 - **Parameter helpers** ([`declare_and_get_parameter.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.h)) - ROS 2 parameter loading
 
 ## TODO
-- Implement omni vehicle.
 - Add tests.
 
 ## Contributing

@@ -28,8 +28,8 @@ inline double mod_2pi(double angle)
   return angle;
 }
 
-template<typename T>
-void CHECK_GE(const T& a, const T& b, const std::string& msg)
+template <typename T>
+void CHECK_GE(const T & a, const T & b, const std::string & msg)
 {
   if (!(a >= b)) throw std::invalid_argument(msg);
 }
@@ -38,6 +38,18 @@ template <typename T>
 void CHECK_GT(const T & a, const T & b, const std::string & msg)
 {
   if (!(a > b)) throw std::invalid_argument(msg);
+}
+
+template <typename T>
+void CHECK_LE(const T & a, const T & b, const std::string & msg)
+{
+  if (!(a <= b)) throw std::invalid_argument(msg);
+}
+
+template <typename T>
+void CHECK_LT(const T & a, const T & b, const std::string & msg)
+{
+  if (!(a < b)) throw std::invalid_argument(msg);
 }
 }  // namespace vehicle_dynamics_sim
 #endif  // VEHICLE_DYNAMICS_SIM_UTILS_H

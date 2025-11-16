@@ -1,6 +1,7 @@
 #include <vehicle_dynamics_sim/vehicles.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -359,6 +360,108 @@ void DifferentialVehicle::update(
   time_ = time;
 }
 
+OmniVehicle::OmniVehicle(rclcpp::Node & node, const std::string & ns)
+: Vehicle(node, ns),
+  wheel_base_(declare_and_get_parameter(node, ns + ".wheel_base", 1.4)),
+  track_(declare_and_get_parameter(node, ns + ".track", 1.2)),
+  vis_wheel_diameter_(declare_and_get_parameter(node, ns + ".vis_wheel_diameter", track_ * 0.25)),
+  drive_actuator_fl_(DriveActuator(node, ns + ".drive_actuators")),
+  drive_actuator_rl_(DriveActuator(node, ns + ".drive_actuators")),
+  drive_actuator_rr_(DriveActuator(node, ns + ".drive_actuators")),
+  drive_actuator_fr_(DriveActuator(node, ns + ".drive_actuators"))
+{
+  CHECK_GT(wheel_base_, 0.0, "'" + ns + ".wheel_base' must be strictly positive.");
+  CHECK_GT(track_, 0.0, "'" + ns + ".track' must be strictly positive.");
+}
+
+void OmniVehicle::update(
+  const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist)
+{
+  // Preprocess
+  // Motor sequence always FL (front left), RL (rear left), RR, FR
+  const Eigen::Matrix<double, 4, 2> motor_positions{
+    {wheel_base_ / 2.0, track_ / 2.0},
+    {-wheel_base_ / 2.0, track_ / 2.0},
+    {-wheel_base_ / 2.0, -track_ / 2.0},
+    {wheel_base_ / 2.0, -track_ / 2.0},
+  };
+  const Eigen::Matrix2d angular_cross{
+    {0.0, reference_twist.twist.angular.z}, {-reference_twist.twist.angular.z, 0.0}};
+  const Eigen::Matrix<double, 4, 2> wheel_velocity_vectors =
+    Eigen::Matrix<double, 1, 2>{reference_twist.twist.linear.x, reference_twist.twist.linear.y}
+      .replicate(4, 1) +
+    motor_positions * angular_cross;
+  // alpha = wheel free rolling vector y component divided by its x component
+  const Eigen::Vector4d motor_alphas{1.0, -1.0, 1.0, -1.0};
+  const Eigen::Vector4d motor_velocities =
+    wheel_velocity_vectors.block<4, 1>(0, 1) +
+    motor_alphas.cwiseProduct(wheel_velocity_vectors.block<4, 1>(0, 0));
+  const double scale =
+    motor_velocities.cwiseAbs().maxCoeff() / drive_actuator_fl_.get_max_velocity();
+  const Eigen::Vector4d motor_reference_velocities =
+    scale > 1.0 ? motor_velocities / scale : motor_velocities;
+  // Simulate actuators
+  const Eigen::Vector4d motor_actual_velocities{
+    drive_actuator_fl_.get_new_velocity(time, motor_reference_velocities(0)),
+    drive_actuator_rl_.get_new_velocity(time, motor_reference_velocities(1)),
+    drive_actuator_rr_.get_new_velocity(time, motor_reference_velocities(2)),
+    drive_actuator_fr_.get_new_velocity(time, motor_reference_velocities(3)),
+  };
+  // Figure out movement (solve using least squares, minimizing slip)
+  Eigen::Matrix<double, 4, 3> A;
+  A.block<4, 1>(0, 0) = motor_alphas;
+  A.block<4, 1>(0, 1) = -Eigen::Vector4d::Ones();
+  A.block<4, 1>(0, 2) = motor_positions.block<4, 1>(0, 0) -
+                        motor_alphas.cwiseProduct(motor_positions.block<4, 1>(0, 1));
+  const Eigen::Vector4d b = motor_actual_velocities;
+  const Eigen::Vector3d x = (A.transpose() * A).ldlt().solve(A.transpose() * b);
+  const Eigen::Vector2d v{x(0), x(1)};
+  const double v_angular = x(2);
+  // Integrate
+  const double dt = (time - time_).seconds();
+  const double new_heading = mod_2pi(heading_ + dt * v_angular);
+  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
+  const double s = std::sin(mean_heading), c = std::cos(mean_heading);
+  position_ += Eigen::Matrix2d{{c, -s}, {s, c}} * dt * v;
+  heading_ = new_heading;
+  store_actual_twist(time, v.x(), v.y(), v_angular);
+  // For next iterations
+  time_ = time;
+}
+
+std::string OmniVehicle::get_robot_description() const
+{
+  std::string urdf;
+  urdf += create_header(this->name());
+  urdf += create_link("base_link");
+  const double wheel_width = vis_wheel_diameter_ * 0.35;
+  // Four wheels
+  // Front left
+  urdf += create_wheel("wheel_front_left", vis_wheel_diameter_, wheel_width);
+  urdf += create_fixed_joint(
+    "base_link", "wheel_front_left",
+    Eigen::Vector3d{wheel_base_ / 2.0, track_ / 2.0, vis_wheel_diameter_ / 2.0});
+  // Rear left
+  urdf += create_wheel("wheel_rear_left", vis_wheel_diameter_, wheel_width);
+  urdf += create_fixed_joint(
+    "base_link", "wheel_rear_left",
+    Eigen::Vector3d{-wheel_base_ / 2.0, track_ / 2.0, vis_wheel_diameter_ / 2.0});
+  // Rear right
+  urdf += create_wheel("wheel_rear_right", vis_wheel_diameter_, wheel_width);
+  urdf += create_fixed_joint(
+    "base_link", "wheel_rear_right",
+    Eigen::Vector3d{-wheel_base_ / 2.0, -track_ / 2.0, vis_wheel_diameter_ / 2.0});
+  // Front right
+  urdf += create_wheel("wheel_front_right", vis_wheel_diameter_, wheel_width);
+  urdf += create_fixed_joint(
+    "base_link", "wheel_front_right",
+    Eigen::Vector3d{wheel_base_ / 2.0, -track_ / 2.0, vis_wheel_diameter_ / 2.0});
+  // Create body
+  // TODO
+  urdf += create_tail();
+  return urdf;
+}
+
 std::unique_ptr<Vehicle> to_vehicle(
   const VehicleName model, rclcpp::Node & node, const std::string & ns)
 {
@@ -367,11 +470,8 @@ std::unique_ptr<Vehicle> to_vehicle(
       return std::make_unique<BicycleVehicle>(node, ns);
     case VehicleName::DIFFERENTIAL:
       return std::make_unique<DifferentialVehicle>(node, ns);
-    default:
-      // TODO
-      throw std::invalid_argument(
-        fmt::format("Unsupported model name enum value: {}", static_cast<int>(model)));
-      return nullptr;
+    case VehicleName::OMNI:
+      return std::make_unique<OmniVehicle>(node, ns);
   }
   throw std::invalid_argument(
     fmt::format("Unknown model name enum value: {}", static_cast<int>(model)));

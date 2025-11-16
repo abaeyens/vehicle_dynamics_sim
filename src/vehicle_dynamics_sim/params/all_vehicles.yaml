@@ -35,6 +35,15 @@ sim_node:
           time_constant: 0.2
           max_acceleration: 1.0
           max_velocity: 0.5
+      omni:
+        base_link_offset: 0.0
+        wheel_base: 1.4
+        track: 1.2
+        drive_actuators:
+          dead_time: 0.2
+          time_constant: 0.5
+          max_acceleration: 0.5
+          max_velocity: 1.0
 
     localization:
       odom_walk_velocity_translation: 0.0025

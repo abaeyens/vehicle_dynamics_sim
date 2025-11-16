@@ -319,6 +319,48 @@ private:
   DriveActuator drive_actuator_right_;
 };
 
+class OmniVehicle : public Vehicle
+{
+public:
+  /**
+   * @brief Omni drive vehicle model (four independently driven wheels with mecanum wheels).
+   * 
+   * @param node ROS node used to fetch parameters
+   * @param ns Parameter namespace (e.g., "vehicle")
+   */
+  OmniVehicle(rclcpp::Node & node, const std::string & ns);
+
+  /**
+   * @brief Update omni vehicle state using omni drive kinematics.
+   * 
+   * Converts twist to wheel velocities, simulates independent actuators, integrates motion.
+   * Uses midpoint integration for accuracy.
+   * 
+   * @param time Current simulation time
+   * @param reference_twist Commanded twist.linear.x [m/s] and twist.angular.z [rad/s]
+   */
+  void update(
+    const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist) override;
+
+  /**
+   * @brief Generate URDF with left and right drive wheels.
+   * @return URDF XML string with base_link, axle, and two fixed wheels
+   */
+  std::string get_robot_description() const override;
+
+private:
+  // Params
+  const double wheel_base_;
+  const double track_;
+  const double vis_wheel_diameter_;
+  // Actuators
+  // fl = front left, rl = rear left etc.
+  DriveActuator drive_actuator_fl_;
+  DriveActuator drive_actuator_rl_;
+  DriveActuator drive_actuator_rr_;
+  DriveActuator drive_actuator_fr_;
+};
+
 /**
  * @brief Factory function to instantiate a vehicle model from VehicleName enum.
  * 
