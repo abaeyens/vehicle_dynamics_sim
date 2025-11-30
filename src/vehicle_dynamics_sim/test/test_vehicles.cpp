@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <tuple>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
@@ -71,7 +72,7 @@ TEST(DriveActuator, max_velocity_and_acceleration)
   static constexpr double MAX_ACCELERATION = 1.0;
   DriveActuator drive_actuator(MAX_VELOCITY, 0.0, MAX_ACCELERATION, 0.0);
   const rclcpp::Time time0{static_cast<int64_t>(0), RCL_ROS_TIME};
-  drive_actuator.get_new_velocity(time0, 0.0);
+  std::ignore = drive_actuator.get_new_velocity(time0, 0.0);
   /// Act
   const double v0 = drive_actuator.get_new_velocity(time0, 5.0);
   const rclcpp::Time time1 = time0 + rclcpp::Duration(200ms);
@@ -91,12 +92,12 @@ TEST(DriveActuator, low_pass)
   DriveActuator drive_actuator(0.0, TIME_CONSTANT, 0.0, 0.0);
   const rclcpp::Time time0{static_cast<int64_t>(0), RCL_ROS_TIME};
   static constexpr double V_REF = 3.0;
-  drive_actuator.get_new_velocity(time0, 0.0);
+  std::ignore = drive_actuator.get_new_velocity(time0, 0.0);
   /// Act
   const double v0 = drive_actuator.get_new_velocity(time0, V_REF);
   rclcpp::Time time1 = time0;
   for (; time1 - time0 < rclcpp::Duration(500ms); time1 += rclcpp::Duration(10ms))
-    drive_actuator.get_new_velocity(time1, V_REF);
+    std::ignore = drive_actuator.get_new_velocity(time1, V_REF);
   const double v1 = drive_actuator.get_new_velocity(time1, V_REF);
   const rclcpp::Time time2 = time1 + rclcpp::Duration(500ms);
   const double v2 = drive_actuator.get_new_velocity(time2, V_REF);
@@ -114,7 +115,7 @@ TEST(SteeringActuator, max_position_and_velocity)
   static constexpr double MAX_VELOCITY = 2.0;
   SteeringActuator steering_actuator(MAX_POSITION, 0.0, MAX_VELOCITY, 0.0);
   const rclcpp::Time time0{static_cast<int64_t>(0), RCL_ROS_TIME};
-  steering_actuator.get_new_position(time0, 0.0);
+  std::ignore = steering_actuator.get_new_position(time0, 0.0);
   /// Act
   const double p0 = steering_actuator.get_new_position(time0, 1.5);
   const rclcpp::Time time1 = time0 + rclcpp::Duration(100ms);
@@ -134,7 +135,7 @@ TEST(SteeringActuator, low_pass)
   SteeringActuator steering_actuator(0.0, TIME_CONSTANT, 0.0, 0.0);
   const rclcpp::Time time0{static_cast<int64_t>(0), RCL_ROS_TIME};
   static constexpr double P_REF = 2.0;
-  steering_actuator.get_new_position(time0, 0.0);
+  std::ignore = steering_actuator.get_new_position(time0, 0.0);
   /// Act
   const double p0 = steering_actuator.get_new_position(time0, P_REF);
   const rclcpp::Time time1 = time0 + rclcpp::Duration(500ms);

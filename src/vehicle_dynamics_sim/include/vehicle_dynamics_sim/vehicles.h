@@ -1,5 +1,5 @@
-#ifndef VEHICLE_DYNAMICS_SIM_VEHICLES_H
-#define VEHICLE_DYNAMICS_SIM_VEHICLES_H
+#ifndef VEHICLE_DYNAMICS_SIM__VEHICLES_H_
+#define VEHICLE_DYNAMICS_SIM__VEHICLES_H_
 
 #include <cstdint>
 #include <deque>
@@ -35,7 +35,7 @@ static constexpr auto ALL_VEHICLE_NAMES =
  * @return String representation ("bicycle", "differential", or "omni")
  * @throws std::invalid_argument if the enum value is not recognized
  */
-std::string toString(const VehicleName & name);
+[[nodiscard]] std::string toString(VehicleName name);
 
 /**
  * @brief Convert a string to the corresponding VehicleName enum value.
@@ -43,15 +43,9 @@ std::string toString(const VehicleName & name);
  * @return Corresponding VehicleName enum value
  * @throws std::invalid_argument if the string doesn't match any known vehicle type
  */
-VehicleName toVehicleName(const std::string_view & name);
+[[nodiscard]] VehicleName toVehicleName(std::string_view name);
 
-class ModelBase
-{
-protected:
-  rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
-};
-
-class DeadTimeDelay : public ModelBase
+class DeadTimeDelay
 {
 public:
   /**
@@ -64,7 +58,7 @@ public:
    * @param ns Parameter namespace (e.g., "vehicle.drive_actuator")
    */
   DeadTimeDelay(rclcpp::Node & node, const std::string & ns);
-  DeadTimeDelay(double dead_time) : ModelBase(), dead_time_(dead_time) {}
+  explicit DeadTimeDelay(double dead_time) : dead_time_(dead_time) {}
 
   /**
    * @brief Add a time-stamped value to the delay queue.
@@ -72,7 +66,7 @@ public:
    * @param time Timestamp when the value was commanded (must be monotonically increasing)
    * @param value The input value to be delayed
    */
-  void enter(const rclcpp::Time & time, const double value);
+  void enter(const rclcpp::Time & time, double value);
 
   /**
    * @brief Retrieve the delayed value for the specified time.
@@ -80,17 +74,18 @@ public:
    * @param time Current simulation time
    * @return The value from dead_time_ seconds ago (or 0.0 if queue doesn't extend far enough)
    */
-  double get(const rclcpp::Time & time);
+  [[nodiscard]] double get(const rclcpp::Time & time);
 
 private:
   // Parameters
   const double dead_time_;
   // State
+  rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
   // oldest value first, newest last (timestamps increasing)
   std::deque<std::pair<rclcpp::Time, double>> queue_;
 };
 
-class DriveActuator : public ModelBase
+class DriveActuator
 {
 public:
   /**
@@ -104,15 +99,14 @@ public:
   DriveActuator(rclcpp::Node & node, const std::string & ns);
   DriveActuator(
     double max_velocity, double time_constant, double max_acceleration, double dead_time)
-  : ModelBase(),
-    max_velocity_(max_velocity),
+  : max_velocity_(max_velocity),
     time_constant_(time_constant),
     max_acceleration_(max_acceleration),
     deadTimeDelay_(dead_time)
   {
   }
 
-  inline double get_max_velocity() const { return max_velocity_; }
+  [[nodiscard]] double get_max_velocity() const { return max_velocity_; }
 
   /**
    * @brief Compute actuator output velocity after applying all dynamic constraints.
@@ -121,7 +115,7 @@ public:
    * @param reference_velocity Commanded velocity [m/s]
    * @return Actual actuator velocity [m/s]
    */
-  double get_new_velocity(const rclcpp::Time & time, const double & reference_velocity);
+  [[nodiscard]] double get_new_velocity(const rclcpp::Time & time, double reference_velocity);
 
 private:
   // Parameters
@@ -131,10 +125,11 @@ private:
   // Submodels
   DeadTimeDelay deadTimeDelay_;
   // State
+  rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
   double prev_velocity_ = 0;
 };
 
-class SteeringActuator : public ModelBase
+class SteeringActuator
 {
 public:
   /**
@@ -148,16 +143,15 @@ public:
    */
   SteeringActuator(rclcpp::Node & node, const std::string & ns);
   SteeringActuator(double max_position, double time_constant, double max_velocity, double dead_time)
-  : ModelBase(),
-    max_position_(max_position),
+  : max_position_(max_position),
     time_constant_(time_constant),
     max_velocity_(max_velocity),
     deadTimeDelay_(dead_time)
   {
   }
 
-  inline double get_max_position() const { return max_position_; }
-  inline double get_current_position() const { return prev_position_; }
+  [[nodiscard]] double get_max_position() const { return max_position_; }
+  [[nodiscard]] double get_current_position() const { return prev_position_; }
 
   /**
    * @brief Compute actuator output steering angle after applying all dynamic constraints.
@@ -166,7 +160,7 @@ public:
    * @param reference_position Commanded steering angle [rad]
    * @return Actual steering angle [rad], wrapped to [-π, π]
    */
-  double get_new_position(const rclcpp::Time & time, const double & reference_position);
+  [[nodiscard]] double get_new_position(const rclcpp::Time & time, double reference_position);
 
 private:
   // Parameters
@@ -176,10 +170,11 @@ private:
   // Submodels
   DeadTimeDelay deadTimeDelay_;
   // State
+  rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
   double prev_position_ = 0;
 };
 
-class Vehicle : public ModelBase
+class Vehicle
 {
 public:
   /**
@@ -192,18 +187,19 @@ public:
    * @param ns Parameter namespace (e.g., "vehicle")
    */
   Vehicle(rclcpp::Node & node, const std::string & ns);
+  virtual ~Vehicle() = default;
 
   /**
    * @brief Get human-readable class name using RTTI demangling.
    * @return Demangled class name (e.g., "BicycleVehicle", "DifferentialVehicle")
    */
-  std::string name() const;
+  [[nodiscard]] std::string name() const;
 
   /**
    * @brief Get current pose of the vehicle's base_link frame.
    * @return Pose2D with global x, y position [m] and heading [rad]
    */
-  Pose2D get_pose() const;
+  [[nodiscard]] Pose2D get_pose() const { return pose_; }
 
   /**
    * @brief Update vehicle state by simulating one timestep.
@@ -221,11 +217,11 @@ public:
    * @brief Generate URDF for visualization and kinematics.
    * @return Complete URDF XML string with links, joints, and visual geometry
    */
-  virtual std::string get_robot_description() const = 0;
+  [[nodiscard]] virtual std::string get_robot_description() const = 0;
   // Getters
-  inline double get_base_link_offset() const { return base_link_offset_; }
-  inline geometry_msgs::msg::TwistStamped get_actual_twist() const { return actual_twist_; }
-  inline sensor_msgs::msg::JointState get_joint_states() const { return joint_states_; }
+  [[nodiscard]] double get_base_link_offset() const { return base_link_offset_; }
+  [[nodiscard]] geometry_msgs::msg::TwistStamped get_actual_twist() const { return actual_twist_; }
+  [[nodiscard]] sensor_msgs::msg::JointState get_joint_states() const { return joint_states_; }
 
 protected:
   /**
@@ -238,14 +234,13 @@ protected:
    * @param vy Lateral velocity at vehicle reference point (fixed_axle frame) [m/s]
    * @param oz Yaw rate [rad/s]
    */
-  void store_actual_twist(
-    const rclcpp::Time & time, const double vx, const double vy, const double oz);
+  void store_actual_twist(const rclcpp::Time & time, double vx, double vy, double oz);
 
   // Parameters
   const double base_link_offset_;
   // State
-  Eigen::Vector2d position_ = Eigen::Vector2d::Zero();
-  double heading_ = 0;
+  rclcpp::Time time_{static_cast<int64_t>(0), RCL_ROS_TIME};
+  Pose2D pose_ = Pose2D::Zero();
   // For publishing thereafter
   geometry_msgs::msg::TwistStamped actual_twist_;
   sensor_msgs::msg::JointState joint_states_;
@@ -282,7 +277,7 @@ public:
    * @brief Generate URDF with Ackermann steering geometry.
    * @return URDF XML string with base_link, axles, and wheels (single or dual per axle)
    */
-  std::string get_robot_description() const override;
+  [[nodiscard]] std::string get_robot_description() const override;
 
 private:
   // Params
@@ -329,7 +324,7 @@ public:
    * @brief Generate URDF with left and right drive wheels.
    * @return URDF XML string with base_link, axle, and two fixed wheels
    */
-  std::string get_robot_description() const override;
+  [[nodiscard]] std::string get_robot_description() const override;
 
 private:
   // Params
@@ -367,7 +362,7 @@ public:
    * @brief Generate URDF with left and right drive wheels.
    * @return URDF XML string with base_link, axle, and two fixed wheels
    */
-  std::string get_robot_description() const override;
+  [[nodiscard]] std::string get_robot_description() const override;
 
 private:
   // Params
@@ -386,7 +381,6 @@ private:
  * @brief Factory function to instantiate a vehicle model from VehicleName enum.
  * 
  * Creates appropriate derived Vehicle class (BicycleVehicle, DifferentialVehicle, etc.).
- * Note: Historical name (originally returned ModelBase*); now returns Vehicle*.
  * 
  * @param model Vehicle type to instantiate
  * @param node ROS node for parameter loading
@@ -397,4 +391,4 @@ private:
 std::unique_ptr<Vehicle> to_vehicle(
   const VehicleName model, rclcpp::Node & node, const std::string & ns);
 }  // namespace vehicle_dynamics_sim
-#endif  // VEHICLE_DYNAMICS_SIM_VEHICLES_H
+#endif  // VEHICLE_DYNAMICS_SIM__VEHICLES_H_

@@ -1,6 +1,5 @@
-#ifndef VEHICLE_DYNAMICS_SIM_LOCALIZATION_H
-#define VEHICLE_DYNAMICS_SIM_LOCALIZATION_H
-
+#ifndef VEHICLE_DYNAMICS_SIM__LOCALIZATION_H_
+#define VEHICLE_DYNAMICS_SIM__LOCALIZATION_H_
 #include <random>
 #include <string>
 
@@ -61,7 +60,7 @@ public:
    * @param T_M_B True vehicle pose in map frame (ground truth)
    * @return Pair of {T_M_O (map→odom with noise), T_O_B (odom→base_link, no noise)}
    */
-  std::pair<Pose2D, Pose2D> update(const rclcpp::Time & time, const Pose2D & T_M_B);
+  [[nodiscard]] std::pair<Pose2D, Pose2D> update(const rclcpp::Time & time, const Pose2D & T_M_B);
 
 private:
   // Parameters (all are variance values: σ²)
@@ -71,7 +70,7 @@ private:
   const double map_sample_noise_rotation_;       ///< Map localization noise variance [rad²/s]
 
   // Noise generators
-  static constexpr int RNG_SEED = 12345;
+  static constexpr int RNG_SEED = 12345;  // fix seed to make noise deterministic
   std::mt19937 rng_;
   std::normal_distribution<double> normal_;
 
@@ -81,4 +80,4 @@ private:
   Pose2D T_M_Bp_ = Pose2D::Zero();  ///< Previous base_link pose in map frame
 };
 }  // namespace vehicle_dynamics_sim
-#endif  // VEHICLE_DYNAMICS_SIM_LOCALIZATION_H
+#endif  // VEHICLE_DYNAMICS_SIM__LOCALIZATION_H_

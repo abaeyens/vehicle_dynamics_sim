@@ -4,22 +4,20 @@
 
 namespace vehicle_dynamics_sim
 {
-double declare_and_get_parameter(
-  rclcpp::Node & node, const std::string & key, const double & default_value)
+double declare_and_get_parameter(rclcpp::Node & node, const std::string & key, double default_value)
 {
   if (!node.has_parameter(key)) node.declare_parameter<double>(key, default_value);
   return node.get_parameter(key).as_double();
 }
 
 int64_t declare_and_get_parameter(
-  rclcpp::Node & node, const std::string & key, const int64_t & default_value)
+  rclcpp::Node & node, const std::string & key, int64_t default_value)
 {
   if (!node.has_parameter(key)) node.declare_parameter<int64_t>(key, default_value);
   return node.get_parameter(key).as_int();
 }
 
-bool declare_and_get_parameter(
-  rclcpp::Node & node, const std::string & key, const bool & default_value)
+bool declare_and_get_parameter(rclcpp::Node & node, const std::string & key, bool default_value)
 {
   if (!node.has_parameter(key)) node.declare_parameter<bool>(key, default_value);
   return node.get_parameter(key).as_bool();

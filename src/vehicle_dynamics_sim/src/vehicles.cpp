@@ -26,7 +26,7 @@
 
 namespace vehicle_dynamics_sim
 {
-std::string toString(const VehicleName & name)
+std::string toString(VehicleName name)
 {
   switch (name) {
     case VehicleName::BICYCLE:
@@ -40,7 +40,7 @@ std::string toString(const VehicleName & name)
     fmt::format("Unknown vehicle name enum value: {}", static_cast<int>(name)));
 }
 
-VehicleName toVehicleName(const std::string_view & name)
+VehicleName toVehicleName(std::string_view name)
 {
   if (name == "bicycle")
     return VehicleName::BICYCLE;
@@ -52,12 +52,12 @@ VehicleName toVehicleName(const std::string_view & name)
 }
 
 DeadTimeDelay::DeadTimeDelay(rclcpp::Node & node, const std::string & ns)
-: ModelBase(), dead_time_(declare_and_get_parameter(node, ns + ".dead_time", 0.2))
+: dead_time_(declare_and_get_parameter(node, ns + ".dead_time", 0.2))
 {
   CHECK_GE(dead_time_, 0.0, "'" + ns + ".dead_time' must be strictly positive.");
 }
 
-void DeadTimeDelay::enter(const rclcpp::Time & time, const double value)
+void DeadTimeDelay::enter(const rclcpp::Time & time, double value)
 {
   if (!queue_.empty() && !(time >= queue_.back().first))
     throw std::invalid_argument("DeadTimeDelay::enter: time must be increasing");
@@ -67,15 +67,16 @@ void DeadTimeDelay::enter(const rclcpp::Time & time, const double value)
 double DeadTimeDelay::get(const rclcpp::Time & time)
 {
   const rclcpp::Time fetch_time =
-    time - rclcpp::Duration(0, static_cast<int32_t>(1e9 * dead_time_));
-  while (queue_.size() > 1 && queue_[1].first < fetch_time) queue_.pop_front();
+    time - rclcpp::Duration(0, static_cast<uint32_t>(1e9 * dead_time_ + 0.5));
+  while (queue_.size() > 1 && queue_[1].first < fetch_time) {
+    queue_.pop_front();
+  }
   const auto & [timestamp, value] = queue_.front();
   return timestamp <= fetch_time ? value : 0.0;
 }
 
 DriveActuator::DriveActuator(rclcpp::Node & node, const std::string & ns)
-: ModelBase(),
-  max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
+: max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
   time_constant_(declare_and_get_parameter(node, ns + ".time_constant", 0.4)),
   max_acceleration_(declare_and_get_parameter(node, ns + ".max_acceleration", 2.0)),
   deadTimeDelay_(node, ns)
@@ -85,7 +86,7 @@ DriveActuator::DriveActuator(rclcpp::Node & node, const std::string & ns)
   CHECK_GE(max_acceleration_, 0.0, "'" + ns + ".max_acceleration' must be positive.");
 }
 
-double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double & reference_velocity)
+double DriveActuator::get_new_velocity(const rclcpp::Time & time, double reference_velocity)
 {
   // Dead time
   deadTimeDelay_.enter(time, reference_velocity);
@@ -112,8 +113,7 @@ double DriveActuator::get_new_velocity(const rclcpp::Time & time, const double &
 }
 
 SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
-: ModelBase(),
-  max_position_(declare_and_get_parameter(node, ns + ".max_position", M_PI / 6)),
+: max_position_(declare_and_get_parameter(node, ns + ".max_position", M_PI / 6)),
   time_constant_(declare_and_get_parameter(node, ns + ".time_constant", 0.05)),
   max_velocity_(declare_and_get_parameter(node, ns + ".max_velocity", 2.0)),
   deadTimeDelay_(node, ns)
@@ -123,8 +123,7 @@ SteeringActuator::SteeringActuator(rclcpp::Node & node, const std::string & ns)
   CHECK_GE(max_velocity_, 0.0, "'" + ns + ".max_velocity' must be positive.");
 }
 
-double SteeringActuator::get_new_position(
-  const rclcpp::Time & time, const double & reference_position)
+double SteeringActuator::get_new_position(const rclcpp::Time & time, double reference_position)
 {
   // Bring in range [-M_PI, M_PI)
   const double reference_position_std = mod_pi(reference_position);
@@ -152,18 +151,11 @@ double SteeringActuator::get_new_position(
 }
 
 Vehicle::Vehicle(rclcpp::Node & node, const std::string & ns)
-: ModelBase(), base_link_offset_(declare_and_get_parameter(node, ns + ".base_link_offset", 0.0))
+: base_link_offset_(declare_and_get_parameter(node, ns + ".base_link_offset", 0.0))
 {
 }
 
 std::string Vehicle::name() const { return boost::core::demangle(typeid(*this).name()); }
-
-Pose2D Vehicle::get_pose() const
-{
-  return Pose2D{
-    position_.x() + std::cos(heading_) * base_link_offset_,
-    position_.y() + std::sin(heading_) * base_link_offset_, heading_};
-}
 
 void Vehicle::store_actual_twist(
   const rclcpp::Time & time, const double vx, const double vy, const double oz)
@@ -237,10 +229,11 @@ void BicycleVehicle::update(
   }
   // Integrate
   const double dt = (time - time_).seconds();
-  const double new_heading = mod_2pi(heading_ + dt * v_angular);
-  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
-  position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
-  heading_ = new_heading;
+  const double new_heading = mod_2pi(pose_.heading() + dt * v_angular);
+  const double mean_heading = mod_2pi(pose_.heading() + 0.5 * dt * v_angular);
+  pose_.position() +=
+    Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
+  pose_.heading() = new_heading;
   store_actual_twist(time, v_forward, 0.0, v_angular);
   // Joint states
   joint_states_.header.stamp = time;
@@ -323,28 +316,6 @@ DifferentialVehicle::DifferentialVehicle(rclcpp::Node & node, const std::string 
   CHECK_GT(track_, 0.0, "'" + ns + ".track' must be strictly positive.");
 }
 
-std::string DifferentialVehicle::get_robot_description() const
-{
-  std::string urdf;
-  urdf += create_header(this->name());
-  urdf += create_link("base_link");
-  urdf += create_link("fixed_axle");
-  urdf += create_fixed_joint(
-    "base_link", "fixed_axle", Eigen::Vector3d{-base_link_offset_, 0.0, vis_tire_diameter_ / 2.0});
-  const double tire_width = vis_tire_diameter_ * 0.25;
-  // Two wheels on fixed axle spaced `track_` apart
-  urdf += create_wheel("fixed_wheel_right", vis_tire_diameter_, tire_width);
-  urdf +=
-    create_fixed_joint("fixed_axle", "fixed_wheel_right", Eigen::Vector3d{0.0, -track_ / 2.0, 0.0});
-  urdf += create_wheel("fixed_wheel_left", vis_tire_diameter_, tire_width);
-  urdf +=
-    create_fixed_joint("fixed_axle", "fixed_wheel_left", Eigen::Vector3d{0.0, track_ / 2.0, 0.0});
-  // Create body
-  // TODO
-  urdf += create_tail();
-  return urdf;
-}
-
 void DifferentialVehicle::update(
   const rclcpp::Time & time, const geometry_msgs::msg::TwistStamped & reference_twist)
 {
@@ -368,13 +339,36 @@ void DifferentialVehicle::update(
   const double v_angular = (v_right - v_left) / track_;
   // Integrate
   const double dt = (time - time_).seconds();
-  const double new_heading = mod_2pi(heading_ + dt * v_angular);
-  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
-  position_ += Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
-  heading_ = new_heading;
+  const double new_heading = mod_2pi(pose_.heading() + dt * v_angular);
+  const double mean_heading = mod_2pi(pose_.heading() + 0.5 * dt * v_angular);
+  pose_.position() +=
+    Eigen::Vector2d{std::cos(mean_heading), std::sin(mean_heading)} * dt * v_forward;
+  pose_.heading() = new_heading;
   store_actual_twist(time, v_forward, 0.0, v_angular);
   // Prepare for next callback
   time_ = time;
+}
+
+std::string DifferentialVehicle::get_robot_description() const
+{
+  std::string urdf;
+  urdf += create_header(this->name());
+  urdf += create_link("base_link");
+  urdf += create_link("fixed_axle");
+  urdf += create_fixed_joint(
+    "base_link", "fixed_axle", Eigen::Vector3d{-base_link_offset_, 0.0, vis_tire_diameter_ / 2.0});
+  const double tire_width = vis_tire_diameter_ * 0.25;
+  // Two wheels on fixed axle spaced `track_` apart
+  urdf += create_wheel("fixed_wheel_right", vis_tire_diameter_, tire_width);
+  urdf +=
+    create_fixed_joint("fixed_axle", "fixed_wheel_right", Eigen::Vector3d{0.0, -track_ / 2.0, 0.0});
+  urdf += create_wheel("fixed_wheel_left", vis_tire_diameter_, tire_width);
+  urdf +=
+    create_fixed_joint("fixed_axle", "fixed_wheel_left", Eigen::Vector3d{0.0, track_ / 2.0, 0.0});
+  // Create body
+  // TODO
+  urdf += create_tail();
+  return urdf;
 }
 
 OmniVehicle::OmniVehicle(rclcpp::Node & node, const std::string & ns)
@@ -436,11 +430,11 @@ void OmniVehicle::update(
   const double v_angular = x(2);
   // Integrate
   const double dt = (time - time_).seconds();
-  const double new_heading = mod_2pi(heading_ + dt * v_angular);
-  const double mean_heading = mod_2pi(heading_ + 0.5 * dt * v_angular);
+  const double new_heading = mod_2pi(pose_.heading() + dt * v_angular);
+  const double mean_heading = mod_2pi(pose_.heading() + 0.5 * dt * v_angular);
   const double s = std::sin(mean_heading), c = std::cos(mean_heading);
-  position_ += Eigen::Matrix2d{{c, -s}, {s, c}} * dt * v;
-  heading_ = new_heading;
+  pose_.position() += Eigen::Matrix2d{{c, -s}, {s, c}} * dt * v;
+  pose_.heading() = new_heading;
   store_actual_twist(time, v.x(), v.y(), v_angular);
   // For next iterations
   time_ = time;

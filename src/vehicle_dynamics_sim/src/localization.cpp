@@ -52,11 +52,13 @@ std::pair<Pose2D, Pose2D> Localization::update(const rclcpp::Time & time, const 
       std::sqrt(driven_distance * odom_walk_velocity_rotation_) * normal_(rng_), -M_PI, M_PI)};
   T_O_B_ = T_O_B_ * (T_Bp_B * odom_noise);
   // Simulate
+  // divide by dt because the fewer the samples, the lower the noise per sample
+  // (maintain same information density irrespective of sample rate)
   const double dt = (time - time_).seconds();
   const Pose2D map_noise{
     std::sqrt(map_sample_noise_translation_ / dt) * normal_(rng_),
     std::sqrt(map_sample_noise_translation_ / dt) * normal_(rng_),
-    std::clamp(std::sqrt(dt * map_sample_noise_rotation_) * normal_(rng_), -M_PI, M_PI)};
+    std::clamp(std::sqrt(map_sample_noise_rotation_ / dt) * normal_(rng_), -M_PI, M_PI)};
   const Pose2D T_O_B_noisy = T_O_B_ * map_noise;
   // Get odom pose in map frame (incl. map localization noise)
   const Pose2D T_M_O = T_M_B * T_O_B_noisy.inverse();

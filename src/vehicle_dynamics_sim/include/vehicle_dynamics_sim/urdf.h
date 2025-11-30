@@ -1,5 +1,5 @@
-#ifndef VEHICLE_DYNAMICS_SIM_URDF_H
-#define VEHICLE_DYNAMICS_SIM_URDF_H
+#ifndef VEHICLE_DYNAMICS_SIM__URDF_H_
+#define VEHICLE_DYNAMICS_SIM__URDF_H_
 
 #include <string>
 
@@ -17,13 +17,13 @@ namespace vehicle_dynamics_sim
  * @param robot_name Name for the robot model
  * @return XML string with header and material definitions
  */
-std::string create_header(const std::string & robot_name);
+[[nodiscard]] std::string create_header(const std::string & robot_name);
 
 /**
  * @brief Create URDF closing </robot> tag.
  * @return XML string with closing tag
  */
-std::string create_tail();
+[[nodiscard]] std::string create_tail();
 
 /**
  * @brief Create a URDF joint element.
@@ -40,7 +40,7 @@ std::string create_tail();
  * @param axis Axis of rotation/translation (default: X axis)
  * @return XML string for the joint element
  */
-std::string create_joint(
+[[nodiscard]] std::string create_joint(
   const std::string & parent_link, const std::string & child_link, const std::string & name,
   const std::string & type, const Eigen::Vector3d & position = Eigen::Vector3d::Zero(),
   const Eigen::Vector3d & axis = Eigen::Vector3d::UnitX());
@@ -55,7 +55,7 @@ std::string create_joint(
  * @param position Joint origin in parent link frame [m] (default: zero)
  * @return XML string for the fixed joint
  */
-std::string create_fixed_joint(
+[[nodiscard]] std::string create_fixed_joint(
   const std::string & parent_link, const std::string & child_link,
   const Eigen::Vector3d & position = Eigen::Vector3d::Zero());
 
@@ -71,7 +71,7 @@ std::string create_fixed_joint(
  * @param position Joint origin in parent link frame [m] (default: zero)
  * @return XML string for the revolute steering joint
  */
-std::string create_steering_joint(
+[[nodiscard]] std::string create_steering_joint(
   const std::string & parent_link, const std::string & child_link, const std::string & name,
   const Eigen::Vector3d & position = Eigen::Vector3d::Zero());
 
@@ -83,7 +83,7 @@ std::string create_steering_joint(
  * @param link Name of the link
  * @return XML string for an empty link element
  */
-std::string create_link(const std::string & link);
+[[nodiscard]] std::string create_link(const std::string & link);
 
 /**
  * @brief Create a wheel link with cylindrical visual geometry.
@@ -96,7 +96,7 @@ std::string create_link(const std::string & link);
  * @param width Wheel width [m] (cylinder length along Y axis)
  * @return XML string for the wheel link with visual geometry
  */
-std::string create_wheel(const std::string & link, double diameter, double width);
+[[nodiscard]] std::string create_wheel(const std::string & link, double diameter, double width);
 
 /**
  * @brief Create a body link with box visual geometry.
@@ -110,6 +110,7 @@ std::string create_wheel(const std::string & link, double diameter, double width
  * @param height Box height along Z axis [m]
  * @return XML string for the body link with visual geometry
  */
-std::string create_body(const std::string & link, double length, double width, double height);
+[[nodiscard]] std::string create_body(
+  const std::string & link, double length, double width, double height);
 }  // namespace vehicle_dynamics_sim
-#endif  // VEHICLE_DYNAMICS_SIM_URDF_H
+#endif  // VEHICLE_DYNAMICS_SIM__URDF_H_

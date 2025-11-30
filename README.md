@@ -5,7 +5,8 @@ ROS 2 vehicle dynamics simulator
 focused on **realistic actuator dynamics** and kinematics.
 Simulates vehicle motion with configurable delay, filtering,
 and acceleration/velocity limits
-to accurately represent real world vehicle behavior.
+to accurately represent real world vehicle behavior,
+with all parameters easily observable on real-world robots.
 
 The main intended **use case** is as
 **development tool for trajectory following controllers**,
@@ -147,11 +148,11 @@ ros2 run vehicle_dynamics_sim sim_node --ros-args \
 ### Send Velocity Commands
 
 ```bash
-# Using command line (simple but limited)
-ros2 topic pub /twist_reference geometry_msgs/msg/Twist \
-  "{linear: {x: 1.0}, angular: {z: 0.5}}"
+# Using command line
+ros2 topic pub twist_reference geometry_msgs/msg/Twist \
+  "{linear: {x: 1.0}, angular: {z: 0.5}}" -r 10
 
-# Using the provided script (generates smooth motion)
+# Using the provided script
 ros2 run vehicle_dynamics_sim publish_some_velocities
 ```
 
@@ -161,14 +162,17 @@ Launch the full Nav2 navigation stack with the simulator:
 
 ```bash
 # Terminal 1: Start simulator
-ros2 run vehicle_dynamics_sim sim_node --ros-args \
-  --params-file src/vehicle_dynamics_sim/params/all_vehicles.yaml
+ros2 run vehicle_dynamics_sim sim_node \
+  --remap twist_reference:=cmd_vel_nav
+  --ros-args -p model:=differential \
 
 # Terminal 2: Launch Nav2
-ros2 launch nav2_example navigation.launch.py \
-  params_file:=src/nav2_example/params/nav2.yaml
+ros2 launch nav2_example navigation.launch.py
 
-# Terminal 3: Visualize in RViz
+# Terminal 3: Publish map for Nav2
+ros2 launch nav2_example serve_map.launch.xml
+
+# Terminal 4: Visualize in RViz
 rviz2 -d layout.rviz
 ```
 
@@ -285,7 +289,7 @@ Main ROS 2 node that orchestrates the simulation.
 - **Subscribed:**
   - `twist_reference` (geometry_msgs/Twist) - Velocity commands
   - `twist_stamped_reference` (geometry_msgs/TwistStamped) - Timestamped velocity commands
-  
+
   > **Note:** Both stamped and non-stamped are provided because Nav2 switched from non-stamped to stamped in ROS 2 Kilted, and we want to support both.
   Adjust the remap in [sim.launch.xml](src/vehicle_dynamics_sim/launch/sim.launch.xml)
   as required.
@@ -578,35 +582,6 @@ sim_node:
     simulate_localization: false  # No localization errors
 ```
 
-
-## Testing and Validation
-
-### Verify Actuator Dynamics
-
-Use PlotJuggler to check:
-- Command vs actual velocity plots show filtering and limits
-- Step responses show time constants and delays
-- Acceleration profiles respect max_acceleration
-
-### Verify Vehicle Kinematics
-
-**For bicycle model:**
-- Zero steering → straight line motion
-- Constant steering → circular arc
-- Turning radius matches: R = wheelbase / tan(steering_angle)
-
-**For differential model:**
-- Equal wheel speeds → straight motion
-- Opposite wheel speeds → rotation in place
-- Velocity scaling maintains turn rate when saturated
-
-### Verify Localization
-
-Check that:
-- Odometry drifts over time (random walk)
-- Map→odom transform is noisy but bounded
-- Noise increases with: distance traveled (odom) and time (map)
-
 ## Troubleshooting
 
 **Vehicle doesn't move:**
@@ -681,11 +656,8 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 
 ## Contributing
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Follow the existing code style (= standard ROS 2)
-4. Add/update documentation and tests
-5. Submit a pull request
+Contributions welcome!
+Please create an issue where we can discuss
+how to integrate your ideas most effectively.
 
 Also always welcome: bug reports.

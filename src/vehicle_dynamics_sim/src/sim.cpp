@@ -81,9 +81,8 @@ SimNode::SimNode()
     });
 
   // Publishers
-  if (be_reference_clock_) {
+  if (be_reference_clock_)
     pub_clock_ = this->create_publisher<builtin_interfaces::msg::Time>("clock", 50);
-  }
   pub_tf_ = this->create_publisher<tf2_msgs::msg::TFMessage>("/tf", 10);
   pub_tf_static_ = this->create_publisher<tf2_msgs::msg::TFMessage>(
     "/tf_static", rclcpp::QoS(10).transient_local());
@@ -95,7 +94,7 @@ SimNode::SimNode()
 
   // Timer, which will tick the simulator at step_rate_
   timer_ = this->create_timer(
-    std::chrono::milliseconds(static_cast<int>(1000.0 / step_rate_)),
+    std::chrono::milliseconds(static_cast<int>(1000.0 / step_rate_ + 0.5)),
     std::bind(&SimNode::tick_simulation, this));
 
   if (!simulate_localization_) {
@@ -117,25 +116,21 @@ SimNode::SimNode()
   }
 }
 
-void SimNode::store_twist_reference(const geometry_msgs::msg::Twist::SharedPtr msg)
+void SimNode::store_twist_reference(const geometry_msgs::msg::Twist::SharedPtr & msg)
 {
   twist_reference_.header.stamp = time_;
   twist_reference_.twist = *msg;
   // Transform to base frame
-  const double & offset = vehicle_->get_base_link_offset();
-  if (offset != 0) {
-    twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
-  }
+  const double offset = vehicle_->get_base_link_offset();
+  if (offset != 0) twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
 }
 
-void SimNode::store_twist_reference(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+void SimNode::store_twist_reference(const geometry_msgs::msg::TwistStamped::SharedPtr & msg)
 {
   twist_reference_ = *msg;
   // Transform to base frame
-  const double & offset = vehicle_->get_base_link_offset();
-  if (offset != 0) {
-    twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
-  }
+  const double offset = vehicle_->get_base_link_offset();
+  if (offset != 0) twist_reference_.twist.linear.y -= offset * twist_reference_.twist.angular.z;
 }
 
 void SimNode::tick_simulation()
@@ -143,13 +138,13 @@ void SimNode::tick_simulation()
   // Update time
   // TODO using now() creates quite a bit of jitter
   // can we get the time from the timer?
-  time_ = be_reference_clock_ ? time_ + rclcpp::Duration(0, static_cast<int32_t>(1e9 / step_rate_))
-                              : this->get_clock()->now();
+  time_ = be_reference_clock_
+            ? time_ + rclcpp::Duration(0, static_cast<uint32_t>(1e9 / step_rate_ + 0.5))
+            : this->get_clock()->now();
 
   // Check that clock type of time is ROS_TIME
-  if (time_.get_clock_type() != RCL_ROS_TIME) {
+  if (time_.get_clock_type() != RCL_ROS_TIME)
     throw std::invalid_argument("SimNode::tick_simulation: time must use ROS_TIME clock type");
-  }
 
   // If reference twist too old, substitute with zero
   if ((time_ - twist_reference_.header.stamp).seconds() > twist_reference_max_oldness_)

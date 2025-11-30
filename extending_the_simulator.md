@@ -2,7 +2,8 @@
 
 ## Adding a New Vehicle Type
 
-1. **Define the vehicle class** in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
+1. **Define the vehicle class** in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h`](
+     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
    ```cpp
    class MyVehicle : public Vehicle {
    public:
@@ -15,7 +16,8 @@
    };
    ```
 
-2. **Implement kinematics** in [`src/vehicle_dynamics_sim/src/vehicles.cpp`](src/vehicle_dynamics_sim/src/vehicles.cpp):
+2. **Implement kinematics** in [`src/vehicle_dynamics_sim/src/vehicles.cpp`](
+     src/vehicle_dynamics_sim/src/vehicles.cpp):
    - Load parameters in constructor
    - Implement `update()` with your kinematic model
    - Generate URDF in `get_robot_description()`
@@ -27,25 +29,29 @@
      return std::make_unique<MyVehicle>(node, ns);
    ```
 
-4. **Add to enum** in [`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
+4. **Add to enum** in [`vehicles.h`](
+     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
    ```cpp
    enum class VehicleName : uint8_t {
      BICYCLE, DIFFERENTIAL, OMNI, MY_VEHICLE
    };
    ```
 
-5. **Update string conversion** functions ([`toString()` and `toVehicleName()`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h))
+5. **Update string conversion** functions ([`toString()` and `toVehicleName()`](
+  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h))
 
-6. **Add parameters** to [`src/vehicle_dynamics_sim/params/all_vehicles.yaml`](src/vehicle_dynamics_sim/params/all_vehicles.yaml)
+6. **Add parameters** to [`src/vehicle_dynamics_sim/params/all_vehicles.yaml`](
+  src/vehicle_dynamics_sim/params/all_vehicles.yaml)
 
 ## Adding Custom Actuators
+Existinc examples: `DriveActuator` and `SteeringActuator` in [vehicles.h](
+  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h).
 
-Derive from `ModelBase` and implement:
+Implement:
 - Constructor with parameter loading
 - State update method
 - Internal state variables
 
 Example use cases:
 - Hydraulic actuators with different dynamics
-- Electric motors with torque limits
 - Pneumatic systems with pressure dynamics

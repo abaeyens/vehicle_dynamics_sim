@@ -14,11 +14,11 @@
 namespace vehicle_dynamics_sim
 {
 geometry_msgs::msg::TransformStamped to_transformstamped(
-  const Pose2D & pose, const rclcpp::Time & stamp, const std::string_view & frame_id,
-  const std::string_view & child_frame_id)
+  const Pose2D & pose, const rclcpp::Time & stamp, std::string_view frame_id,
+  std::string_view child_frame_id)
 {
   const Eigen::Quaterniond orientation =
-    Eigen::Quaterniond(Eigen::AngleAxisd(pose.theta(), Eigen::Vector3d::UnitZ()));
+    Eigen::Quaterniond(Eigen::AngleAxisd(pose.heading(), Eigen::Vector3d::UnitZ()));
 
   geometry_msgs::msg::TransformStamped msg;
   msg.header.stamp = stamp;
@@ -36,10 +36,10 @@ geometry_msgs::msg::TransformStamped to_transformstamped(
 
 nav_msgs::msg::Odometry to_odometry(
   const Pose2D & pose, const geometry_msgs::msg::Twist & twist, const rclcpp::Time & time,
-  const std::string_view & frame_id, const std::string_view & child_frame_id)
+  std::string_view frame_id, std::string_view child_frame_id)
 {
   const Eigen::Quaterniond orientation =
-    Eigen::Quaterniond(Eigen::AngleAxisd(pose.theta(), Eigen::Vector3d::UnitZ()));
+    Eigen::Quaterniond(Eigen::AngleAxisd(pose.heading(), Eigen::Vector3d::UnitZ()));
 
   nav_msgs::msg::Odometry msg;
   msg.header.stamp = time;

@@ -2,7 +2,35 @@ cmake_minimum_required(VERSION 3.8)
 project(vehicle_dynamics_sim)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wconversion -Wextra -Wpedantic)
+  add_compile_options(
+    -Werror
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wsign-conversion
+    -Wcast-qual
+    -Wformat=2
+    -Wundef
+    #-Werror=float-equal
+    -Wshadow
+    -Wcast-align
+    -Wunused
+    -Wnull-dereference
+    -Wdouble-promotion
+    -Wimplicit-fallthrough
+    -Woverloaded-virtual
+    -Wnon-virtual-dtor
+    -Werror=return-type
+    -Werror=uninitialized
+    -Werror=unused-result
+    # these below are GCC only
+    -Wlogical-op
+    -Wduplicated-cond
+    -Wduplicated-branches
+    -Wmisleading-indentation
+    -Wredundant-decls
+  )
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -44,8 +72,8 @@ add_library(${PROJECT_NAME}
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-  ${EIGEN3_INCLUDE_DIRS})
+  "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${EIGEN3_INCLUDE_DIRS})
 ament_target_dependencies(${PROJECT_NAME} PUBLIC ${dependencies})
 
 # executable
@@ -55,7 +83,6 @@ add_executable(sim_node
 target_include_directories(sim_node PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_include_directories(sim_node PRIVATE)
 target_link_libraries(sim_node ${PROJECT_NAME} fmt::fmt)
 ament_target_dependencies(sim_node ${dependencies})
 
@@ -115,7 +142,7 @@ if(BUILD_TESTING)
     test/test_utils.cpp
     test/test_vehicles.cpp
   )
-  target_link_libraries(test_all ${PROJECT_NAME})
+  target_link_libraries(test_all ${PROJECT_NAME} fmt::fmt)
   ament_target_dependencies(
       test_all ${dependencies} ${test_dependencies})
 
@@ -133,6 +160,10 @@ if(BUILD_TESTING)
   add_ros_isolated_launch_test(test/test_vehicles_bicycle_rear_steer_front_drive.py)
   add_ros_isolated_launch_test(test/test_vehicles_differential.py)
   add_ros_isolated_launch_test(test/test_vehicles_omni.py)
+
+  # Linting
+  #find_package(ament_lint_auto REQUIRED)
+  #ament_lint_auto_find_test_dependencies()
 endif()
 
 ament_package()

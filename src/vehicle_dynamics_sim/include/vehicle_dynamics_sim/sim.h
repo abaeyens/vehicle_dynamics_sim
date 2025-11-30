@@ -1,5 +1,5 @@
-#ifndef VEHICLE_DYNAMICS_SIM_SIM_H
-#define VEHICLE_DYNAMICS_SIM_SIM_H
+#ifndef VEHICLE_DYNAMICS_SIM__SIM_H_
+#define VEHICLE_DYNAMICS_SIM__SIM_H_
 
 #include <memory>
 #include <string>
@@ -33,7 +33,8 @@ namespace vehicle_dynamics_sim
  * 1. Ideal: Perfect localization, odom frame fixed to map
  * 2. Simulated: Noisy localization with drifting odom frame
  * 
- * Can operate as reference clock (be_reference_clock), follow external clock (use_sim_time)
+ * Can operate as reference clock (be_reference_clock),
+ * follow external clock (use_sim_time)
  * or run with wall time (both above params disabled).
  */
 class SimNode : public rclcpp::Node
@@ -68,7 +69,7 @@ private:
    * 
    * @param msg Commanded velocity
    */
-  void store_twist_reference(geometry_msgs::msg::Twist::SharedPtr msg);
+  void store_twist_reference(const geometry_msgs::msg::Twist::SharedPtr & msg);
 
   /**
    * @brief Store incoming twist command (stamped).
@@ -77,7 +78,7 @@ private:
    * 
    * @param msg Commanded velocity with timestamp
    */
-  void store_twist_reference(geometry_msgs::msg::TwistStamped::SharedPtr msg);
+  void store_twist_reference(const geometry_msgs::msg::TwistStamped::SharedPtr & msg);
 
   /**
    * @brief Main simulation loop callback (runs at step_rate).
@@ -118,4 +119,4 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;  ///< Simulation loop timer (runs at step_rate)
 };
 }  // namespace vehicle_dynamics_sim
-#endif  // VEHICLE_DYNAMICS_SIM_SIM_H
+#endif  // VEHICLE_DYNAMICS_SIM__SIM_H_

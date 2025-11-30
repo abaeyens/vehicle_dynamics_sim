@@ -5,8 +5,8 @@
   <version>0.0.0</version>
   <description>Example of using vehicle_dynamics_sim with Nav2</description>
   <maintainer email="mail@arnebaeyens.com">Arne Baeyens</maintainer>
-  <author email="mail@arnebaeyens.com">Arne Baeyens</author>
   <license>MIT</license>
+  <author email="mail@arnebaeyens.com">Arne Baeyens</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

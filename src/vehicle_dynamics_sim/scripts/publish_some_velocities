@@ -5,52 +5,52 @@ from geometry_msgs.msg import Twist
 
 
 class VelocityPublisher(Node):
-	def __init__(self):
-		super().__init__('velocity_publisher')
-		self.pub_twist_ = self.create_publisher(Twist, 'cmd_vel_nav', 10)
-		self.timer_period = 1.0/50.0
-		self.timer = self.create_timer(self.timer_period, self.timer_callback)
-		self.start_time = self.get_clock().now()
-		self.get_logger().info('VelocityPublisher node started.')
+    def __init__(self):
+        super().__init__('velocity_publisher')
+        self.pub_twist_ = self.create_publisher(Twist, 'twist_reference', 10)
+        self.timer_period = 1.0/50.0
+        self.timer = self.create_timer(self.timer_period, self.timer_callback)
+        self.start_time = self.get_clock().now()
+        self.get_logger().info('VelocityPublisher node started.')
 
-	def timer_callback(self):
-		now = self.get_clock().now()
-		elapsed = (now - self.start_time).nanoseconds / 1e9
-		twist = Twist()
+    def timer_callback(self):
+        now = self.get_clock().now()
+        elapsed = (now - self.start_time).nanoseconds / 1e9
+        twist = Twist()
 
-		if elapsed < 4.0:
-			twist.linear.x = 2.5
-			twist.angular.z = 0.0
-			self.get_logger().info('Driving forward...')
-		elif elapsed < 8.0:
-			twist.linear.x = 2.0
-			twist.angular.z = 0.5
-			self.get_logger().info('Driving in a circle...')
-		elif elapsed < 12.0:
-			twist.linear.x = 0.0
-			twist.angular.z = 0.5
-			self.get_logger().info('Driving an in place turn...')
-		elif elapsed < 16.0:
-			twist.linear.x = 0.0
-			twist.angular.z = -0.5
-			self.get_logger().info('Driving an in place turn other direction...')
-		else:
-			# Stop
-			twist.linear.x = 0.0
-			twist.angular.z = 0.0
-			self.get_logger().info('Stopping and shutting down node.')
-			self.pub_twist_.publish(twist)
-			raise KeyboardInterrupt()
-		self.pub_twist_.publish(twist)
+        if elapsed < 4.0:
+            twist.linear.x = 2.5
+            twist.angular.z = 0.0
+            self.get_logger().info('Driving forward...')
+        elif elapsed < 8.0:
+            twist.linear.x = 2.0
+            twist.angular.z = 0.5
+            self.get_logger().info('Driving in a circle...')
+        elif elapsed < 12.0:
+            twist.linear.x = 0.0
+            twist.angular.z = 0.5
+            self.get_logger().info('Driving an in place turn...')
+        elif elapsed < 16.0:
+            twist.linear.x = 0.0
+            twist.angular.z = -0.5
+            self.get_logger().info('Driving an in place turn other direction...')
+        else:
+            # Stop
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+            self.get_logger().info('Stopping and shutting down node.')
+            self.pub_twist_.publish(twist)
+            raise KeyboardInterrupt()
+        self.pub_twist_.publish(twist)
 
 
 if __name__ == '__main__':
-	rclpy.init()
-	node = VelocityPublisher()
-	try:
-		rclpy.spin(node)
-	except KeyboardInterrupt:
-		pass
-	finally:
-		node.destroy_node()
-		rclpy.shutdown()
+    rclpy.init()
+    node = VelocityPublisher()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
