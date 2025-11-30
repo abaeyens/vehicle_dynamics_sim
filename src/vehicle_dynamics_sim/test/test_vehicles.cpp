@@ -8,7 +8,7 @@
 #include <rclcpp/time.hpp>
 #include <robot_state_publisher/robot_state_publisher.hpp>
 
-#include <vehicle_dynamics_sim/vehicles.h>
+#include <vehicle_dynamics_sim/vehicles.hpp>
 
 namespace
 {

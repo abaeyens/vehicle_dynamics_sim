@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/declare_and_get_parameter.h>
+#include <vehicle_dynamics_sim/declare_and_get_parameter.hpp>
 
 #include <chrono>
 #include <cmath>
@@ -20,11 +20,11 @@
 #include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
-#include <vehicle_dynamics_sim/conversions.h>
-#include <vehicle_dynamics_sim/localization.h>
-#include <vehicle_dynamics_sim/Pose2D.h>
-#include <vehicle_dynamics_sim/sim.h>
-#include <vehicle_dynamics_sim/vehicles.h>
+#include <vehicle_dynamics_sim/conversions.hpp>
+#include <vehicle_dynamics_sim/localization.hpp>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
+#include <vehicle_dynamics_sim/sim.hpp>
+#include <vehicle_dynamics_sim/vehicles.hpp>
 
 namespace vehicle_dynamics_sim
 {

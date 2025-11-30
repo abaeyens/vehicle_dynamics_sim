@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/declare_and_get_parameter.h>
+#include <vehicle_dynamics_sim/declare_and_get_parameter.hpp>
 
 #include <cstdint>
 

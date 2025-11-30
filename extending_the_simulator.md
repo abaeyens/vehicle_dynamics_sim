@@ -2,8 +2,8 @@
 
 ## Adding a New Vehicle Type
 
-1. **Define the vehicle class** in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h`](
-     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
+1. **Define the vehicle class** in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp`](
+     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp):
    ```cpp
    class MyVehicle : public Vehicle {
    public:
@@ -29,8 +29,8 @@
      return std::make_unique<MyVehicle>(node, ns);
    ```
 
-4. **Add to enum** in [`vehicles.h`](
-     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h):
+4. **Add to enum** in [`vehicles.hpp`](
+     src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp):
    ```cpp
    enum class VehicleName : uint8_t {
      BICYCLE, DIFFERENTIAL, OMNI, MY_VEHICLE
@@ -38,14 +38,14 @@
    ```
 
 5. **Update string conversion** functions ([`toString()` and `toVehicleName()`](
-  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h))
+  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp))
 
 6. **Add parameters** to [`src/vehicle_dynamics_sim/params/all_vehicles.yaml`](
   src/vehicle_dynamics_sim/params/all_vehicles.yaml)
 
 ## Adding Custom Actuators
-Existinc examples: `DriveActuator` and `SteeringActuator` in [vehicles.h](
-  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h).
+Existinc examples: `DriveActuator` and `SteeringActuator` in [vehicles.hpp](
+  src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp).
 
 Implement:
 - Constructor with parameter loading

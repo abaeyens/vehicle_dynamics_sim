@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/urdf.h>
+#include <vehicle_dynamics_sim/urdf.hpp>
 
 #include <cmath>
 #include <string>

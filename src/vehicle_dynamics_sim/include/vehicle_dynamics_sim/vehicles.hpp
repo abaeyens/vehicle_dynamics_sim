@@ -15,8 +15,8 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
-#include <vehicle_dynamics_sim/localization.h>
-#include <vehicle_dynamics_sim/Pose2D.h>
+#include <vehicle_dynamics_sim/localization.hpp>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
 
 namespace vehicle_dynamics_sim
 {

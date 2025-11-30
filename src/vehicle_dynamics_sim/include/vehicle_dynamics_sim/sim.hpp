@@ -14,7 +14,7 @@
 #include <std_msgs/msg/string.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
-#include <vehicle_dynamics_sim/vehicles.h>
+#include <vehicle_dynamics_sim/vehicles.hpp>
 
 namespace vehicle_dynamics_sim
 {

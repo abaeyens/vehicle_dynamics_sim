@@ -6,7 +6,7 @@
 
 #include <Eigen/Dense>
 
-#include <vehicle_dynamics_sim/utils.h>
+#include <vehicle_dynamics_sim/utils.hpp>
 
 namespace vehicle_dynamics_sim
 {

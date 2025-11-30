@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include <vehicle_dynamics_sim/Pose2D.h>
-#include <vehicle_dynamics_sim/utils.h>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
+#include <vehicle_dynamics_sim/utils.hpp>
 
 namespace vehicle_dynamics_sim
 {

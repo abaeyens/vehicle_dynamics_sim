@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/Pose2D.h>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
 
 #include <cmath>
 #include <stdexcept>

@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/localization.h>
+#include <vehicle_dynamics_sim/localization.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -8,8 +8,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <vehicle_dynamics_sim/declare_and_get_parameter.h>
-#include <vehicle_dynamics_sim/utils.h>
+#include <vehicle_dynamics_sim/declare_and_get_parameter.hpp>
+#include <vehicle_dynamics_sim/utils.hpp>
 
 namespace vehicle_dynamics_sim
 {

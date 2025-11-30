@@ -7,7 +7,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
-#include <vehicle_dynamics_sim/Pose2D.h>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
 
 namespace vehicle_dynamics_sim
 {

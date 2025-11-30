@@ -1,4 +1,4 @@
-#include <vehicle_dynamics_sim/vehicles.h>
+#include <vehicle_dynamics_sim/vehicles.hpp>
 
 #include <algorithm>
 #include <array>
@@ -19,10 +19,10 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
-#include <vehicle_dynamics_sim/declare_and_get_parameter.h>
-#include <vehicle_dynamics_sim/Pose2D.h>
-#include <vehicle_dynamics_sim/urdf.h>
-#include <vehicle_dynamics_sim/utils.h>
+#include <vehicle_dynamics_sim/declare_and_get_parameter.hpp>
+#include <vehicle_dynamics_sim/Pose2D.hpp>
+#include <vehicle_dynamics_sim/urdf.hpp>
+#include <vehicle_dynamics_sim/utils.hpp>
 
 namespace vehicle_dynamics_sim
 {

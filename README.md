@@ -275,7 +275,7 @@ Likely we'll therefore deviate from that in the future.
 
 ## Core Components
 
-## SimNode (`sim.h`, `sim.cpp`)
+## SimNode (`sim.hpp`, `sim.cpp`)
 Main ROS 2 node that orchestrates the simulation.
 
 **Responsibilities:**
@@ -303,7 +303,7 @@ Main ROS 2 node that orchestrates the simulation.
   - `odom` (nav_msgs/Odometry) - Odometry messages (pose + actual velocity)
   - `clock` (builtin_interfaces/Time) - Optional simulation time
 
-## Vehicle models (`vehicles.h`, `vehicles.cpp`)
+## Vehicle models (`vehicles.hpp`, `vehicles.cpp`)
 
 ### Base Class: Vehicle
 - Manages pose (position, heading)
@@ -347,7 +347,7 @@ Prioritizes rotation by scaling linear velocity if needed to respect actuator li
 
 **Use cases:** Indoor mobile robots (e.g. Turtlebot), wheelchairs, tank drive platforms
 
-## Actuator Models (`vehicles.h`, `vehicles.cpp`)
+## Actuator Models (`vehicles.hpp`, `vehicles.cpp`)
 
 ### DriveActuator - Models velocity-controlled actuators (drive motors)
 
@@ -387,7 +387,7 @@ Simulates delays from:
 Used in both DriveActuator and SteeringActuator.
 
 ## Other components
-### Localization (`localization.h`, `localization.cpp`)
+### Localization (`localization.hpp`, `localization.cpp`)
 
 Simulates realistic localization with two error sources:
 
@@ -407,7 +407,7 @@ Simulates realistic localization with two error sources:
 
 **Note:** All noise parameters are variances (σ²), not standard deviations.
 
-### URDF Generation (`urdf.h`, `urdf.cpp`)
+### URDF Generation (`urdf.hpp`, `urdf.cpp`)
 
 Programmatic URDF generation for vehicle visualization.
 
@@ -636,20 +636,20 @@ All header files in [`src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/`](s
 
 ### Key Classes
 
-- **SimNode** ([`sim.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/sim.h)) - Main simulation node
-- **Vehicle** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Base vehicle class
-- **BicycleVehicle** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Ackermann steering implementation
-- **DifferentialVehicle** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Tank steering implementation
-- **DriveActuator** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Velocity actuator model
-- **SteeringActuator** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Position actuator model
-- **DeadTimeDelay** ([`vehicles.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.h)) - Time delay model
-- **Localization** ([`localization.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/localization.h)) - Localization simulator
+- **SimNode** ([`sim.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/sim.hpp)) - Main simulation node
+- **Vehicle** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Base vehicle class
+- **BicycleVehicle** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Ackermann steering implementation
+- **DifferentialVehicle** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Tank steering implementation
+- **DriveActuator** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Velocity actuator model
+- **SteeringActuator** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Position actuator model
+- **DeadTimeDelay** ([`vehicles.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/vehicles.hpp)) - Time delay model
+- **Localization** ([`localization.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/localization.hpp)) - Localization simulator
 
 ### Utility Functions
 
-- **URDF generation** ([`urdf.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/urdf.h)) - Programmatic robot description
-- **Conversions** ([`conversions.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/conversions.h)) - Pose/transform utilities
-- **Parameter helpers** ([`declare_and_get_parameter.h`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.h)) - ROS 2 parameter loading
+- **URDF generation** ([`urdf.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/urdf.hpp)) - Programmatic robot description
+- **Conversions** ([`conversions.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/conversions.hpp)) - Pose/transform utilities
+- **Parameter helpers** ([`declare_and_get_parameter.hpp`](src/vehicle_dynamics_sim/include/vehicle_dynamics_sim/declare_and_get_parameter.hpp)) - ROS 2 parameter loading
 
 ## TODO
 - Support running faster than real time.

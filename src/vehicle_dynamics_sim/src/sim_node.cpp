@@ -2,7 +2,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include <vehicle_dynamics_sim/sim.h>
+#include <vehicle_dynamics_sim/sim.hpp>
 
 int main(int argc, char * argv[])
 {
