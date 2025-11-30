@@ -13,11 +13,29 @@ The main intended **use case** is as
 such as those (RPP, MPPI etc.) part of the Nav2 stack,
 both in manual development and in automated testing pipelines.
 
+The video below shows an example with the Nav2 MPPI controller.
+The robot on the right has close to ideal actuators, and drives well,
+while the one on the left has more realistic actuation limits:
+
+[![RViz screen capture video with two robots executing a 180° turn. The one on the right executes a clean turn, while the one on the left overshoots its goal several times and requires markedly more time until finished.](
+  https://img.youtube.com/vi/5Ps_gjATICg/0.jpg)](https://youtu.be/5Ps_gjATICg)
+
+_Small differences show up quickly when executing delicate maneuvers_
+_like a 180° turn._
+_Right, a differential drive robot with close to ideal actuation,_
+_left, the same robot but with considerable actuator limitations._
+_The left robot overshoots its goal several times as a result_
+_of the actuator tracking the control signal slower_
+_than the controller requires._
+
 Key README contents:
 - [Quick Start](#quick-start)
 - [System Architecture](#system-architecture)
 - [Core Components](#core-components)
 - [Configuration](#configuration-reference)
+
+For a bit more introduction, [feel free to read my blog post](
+  https://arnebaeyens.com/blog/2025/vehicle-dynamics-sim/).
 
 ## Features
 
@@ -111,8 +129,14 @@ rviz2 -d layout.rviz
 
 The RViz layout shows:
 - Vehicle model with realistic Ackermann steering geometry
+  (depends on the configured model)
 - TF tree (map → odom → base_link)
 - Odometry path visualization
+
+![RViz screenshot of the generated robot model (URDF), shown in perspective.](
+  https://arnebaeyens.com/assets/img/2025/vehicle-dynamics-sim/rviz_visualization_bicycle.png)
+_Example RViz visualization_
+
 
 ### PlotJuggler
 Analyze vehicle dynamics data in real-time:
@@ -362,6 +386,16 @@ Prioritizes rotation by scaling linear velocity if needed to respect actuator li
 - `time_constant`: Filter time constant [s]
 - `max_velocity`: Velocity limit [m/s]
 - `max_acceleration`: Acceleration limit [m/s²]
+
+The figure below shows these parameters visually
+(except for `max_velocity`):
+![Graph showing how the model actuator response (cyan) follows
+  a given setpoint (red). The effects visualized are dead time,
+  acceleration limits and the low pass effect.](
+  https://arnebaeyens.com/assets/img/2025/vehicle-dynamics-sim/actuator_model.png)
+_Modeled `DriveActuator` response (cyan) for a step reference (red),_
+_showing the effect of three of the key parameters_
+_(dead time, acceleration limits and the low pass effect)._
 
 ### SteeringActuator - Models position-controlled actuators (steering mechanisms)
 
